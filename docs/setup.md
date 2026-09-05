@@ -6,7 +6,7 @@ Both machines should match so a session on either can run any package.
 
 - Node 22 via nvm (`nvm use` reads `.nvmrc`).
 - Yarn 4 via corepack (`corepack enable`; the version is pinned in `package.json`). Never npm.
-- Foundry (`forge`, `cast`, `anvil`): `curl -L https://foundry.sh | bash` then `foundryup`. The lab used forge 1.5.1.
+- Foundry (`forge`, `cast`, `anvil`): `curl -L https://foundry.sh | bash` then `foundryup`. Tested with forge 1.5.1.
 - Docker Desktop (compose v2) for the gym stack and Aquascan.
 - graph-cli: added as a workspace dev dependency, run with `yarn graph ...`. No global install needed.
 - Substreams CLI (M6 only): follow The Graph docs when we get there.
