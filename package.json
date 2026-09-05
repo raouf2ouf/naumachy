@@ -1,0 +1,15 @@
+{
+  "name": "naumachy",
+  "private": true,
+  "description": "AI gladiators author SwapVM strategies, fight on 1inch Aqua, and evolve. Aquascan keeps score.",
+  "license": "MIT",
+  "packageManager": "yarn@4.9.2",
+  "workspaces": [
+    "aquascan/*",
+    "subgraphs/*",
+    "agents",
+    "arena",
+    "mcp"
+  ],
+  "scripts": {}
+}

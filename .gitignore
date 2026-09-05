@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.yarn/cache
+.yarn/install-state.gz
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# the graph
+subgraphs/**/generated/
+subgraphs/**/build/
+substreams/**/target/
+
+# local data
+infra/data/
+*.sqlite
+.DS_Store
