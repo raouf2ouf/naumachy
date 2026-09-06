@@ -6,6 +6,7 @@ import { createPacer } from "./pacer.js";
 import { Gateway } from "./gateway.js";
 import { syncStrategies } from "./lanes/strategies.js";
 import { syncFills } from "./lanes/fills.js";
+import { syncTemplates } from "./lanes/templates.js";
 import { syncPrices } from "./lanes/prices.js";
 import { syncTokens } from "./lanes/tokens.js";
 import { Llama } from "./llama.js";
@@ -53,7 +54,8 @@ async function main() {
       try {
         const s = await syncStrategies(pool, gateway, c.name, c.subgraphId, config.pageSize);
         const f = await syncFills(pool, gateway, c.name, c.subgraphId, config.pageSize);
-        log(`${c.name}: ships +${s.ships.rows} (${s.ships.pages}p) docks +${s.docks.rows} (${s.docks.pages}p) fills +${f.rows} (${f.pages}p) cursor ${f.cursor} head ${f.head}`);
+        const t = await syncTemplates(pool, gateway, c.name, c.subgraphId, config.pageSize);
+        log(`${c.name}: ships +${s.ships.rows} (${s.ships.pages}p) docks +${s.docks.rows} (${s.docks.pages}p) fills +${f.rows} (${f.pages}p) templates ${t.rows} cursor ${f.cursor} head ${f.head}`);
       } catch (err) {
         log(`${c.name}: error ${String(err).slice(0, 200)}`);
       }
