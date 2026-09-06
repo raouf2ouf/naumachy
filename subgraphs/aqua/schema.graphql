@@ -1,0 +1,100 @@
+# Aqua registry entities. Rules baked into the mappings, not into consumers:
+# lowercase ids, the economic flag, template hashing, dialect key by app address.
+# Source of truth for this schema: docs/interfaces.md.
+
+enum StrategyStatus {
+  LIVE
+  DOCKED
+}
+
+enum FillShape {
+  PUSH_ONLY
+  PULL_ONLY
+  TWO_SIDED
+  MULTI
+}
+
+type Maker @entity {
+  id: Bytes!                                   # address
+  strategies: [Strategy!]! @derivedFrom(field: "maker")
+  desks: [Desk!]! @derivedFrom(field: "maker")
+  shipCount: Int!
+  firstSeen: BigInt!
+  lastSeen: BigInt!
+}
+
+type App @entity {
+  id: Bytes!                                   # router address
+  dialect: String!                             # key into the disassembler tables: address plus version
+  strategyCount: Int!
+}
+
+type Template @entity {
+  id: Bytes!                                   # keccak(app, opcode sequence); args ignored
+  app: App!
+  opcodes: [Int!]!                             # raw opcode bytes in program order
+  name: String                                 # human name when known
+  strategyCount: Int!
+  economicVolumeLegs: Int!
+}
+
+type Desk @entity {
+  id: ID!                                      # maker-template-chain
+  maker: Maker!
+  template: Template!
+  chain: String!
+  strategies: [Strategy!]! @derivedFrom(field: "desk")
+  liveCount: Int!
+  fillCount: Int!
+  economicFillCount: Int!
+  firstSeen: BigInt!
+  lastSeen: BigInt!
+}
+
+type Strategy @entity {
+  id: Bytes!                                   # strategyHash
+  registry: Bytes!                             # the Aqua registry that emitted it: canonical or legacy
+  maker: Maker!
+  app: App!
+  desk: Desk!
+  template: Template!
+  program: Bytes!
+  tokens: [Bytes!]!
+  amounts: [BigInt!]!
+  shippedAt: BigInt!
+  shippedTx: Bytes!
+  dockedAt: BigInt
+  dockedTx: Bytes
+  status: StrategyStatus!
+  fills: [Fill!]! @derivedFrom(field: "strategy")
+}
+
+type Fill @entity {
+  id: ID!                                      # tx-strategyHash
+  registry: Bytes!
+  strategy: Strategy!
+  tx: Bytes!
+  block: BigInt!
+  timestamp: BigInt!
+  taker: Bytes                                 # transaction sender
+  legs: [Leg!]! @derivedFrom(field: "fill")
+  shape: FillShape!                            # recomputed as legs arrive within the transaction
+  economic: Boolean!                           # TWO_SIDED or MULTI. The only fills that count.
+}
+
+type Leg @entity(immutable: true) {
+  id: ID!                                      # fill-token
+  fill: Fill!
+  token: Bytes!
+  net: BigInt!                                 # push minus pull, per token
+  pushed: BigInt!
+  pulled: BigInt!
+}
+
+type DailyStrategyStat @entity {
+  id: ID!                                      # strategyHash-day
+  strategy: Strategy!
+  day: Int!
+  economicFills: Int!
+  legs: Int!
+}

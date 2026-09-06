@@ -1,0 +1,23 @@
+{
+  "name": "@naumachy/subgraph-aqua",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Aqua registry subgraph: makers, strategies, fills and legs. One deployment per chain, both registries.",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build --network base --network-file networks.json",
+    "build:mainnet": "graph build --network mainnet --network-file networks.json",
+    "build:arbitrum": "graph build --network arbitrum-one --network-file networks.json",
+    "build:optimism": "graph build --network optimism --network-file networks.json",
+    "build:polygon": "graph build --network matic --network-file networks.json",
+    "build:bsc": "graph build --network bsc --network-file networks.json",
+    "create:local": "graph create --node http://localhost:8020/ naumachy/aqua",
+    "deploy:local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 --version-label v0.1.0 naumachy/aqua",
+    "deploy:studio": "graph deploy --studio",
+    "test": "graph test"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1",
+    "@graphprotocol/graph-ts": "^0.38.2"
+  }
+}

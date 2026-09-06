@@ -1,0 +1,47 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "maker", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "app", "type": "address" },
+      { "indexed": false, "internalType": "bytes32", "name": "strategyHash", "type": "bytes32" },
+      { "indexed": false, "internalType": "bytes", "name": "strategy", "type": "bytes" }
+    ],
+    "name": "Shipped",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "maker", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "app", "type": "address" },
+      { "indexed": false, "internalType": "bytes32", "name": "strategyHash", "type": "bytes32" }
+    ],
+    "name": "Docked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "maker", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "app", "type": "address" },
+      { "indexed": false, "internalType": "bytes32", "name": "strategyHash", "type": "bytes32" },
+      { "indexed": false, "internalType": "address", "name": "token", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "Pulled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "maker", "type": "address" },
+      { "indexed": false, "internalType": "address", "name": "app", "type": "address" },
+      { "indexed": false, "internalType": "bytes32", "name": "strategyHash", "type": "bytes32" },
+      { "indexed": false, "internalType": "address", "name": "token", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "Pushed",
+    "type": "event"
+  }
+]
