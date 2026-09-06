@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+
+/* Bronze on deep water. One committed dark theme with a real blue hue in the ground,
+   one bronze accent for the claim and the interactive state, seafoam for gains, coral for losses. */
+@theme {
+  --color-water-950: #08131c;
+  --color-water-900: #0b1a25;
+  --color-water-800: #10222f;
+  --color-water-700: #17303f;
+  --color-water-600: #23404f;
+  --color-ink: #e7edf1;
+  --color-ink-muted: #8ea2b0;
+  --color-ink-faint: #5d7382;
+  --color-bronze: #d5a54d;
+  --color-bronze-deep: #a97f2f;
+  --color-bronze-soft: #33291a;
+  --color-gain: #55d4a3;
+  --color-loss: #f0786a;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Light: pale water, darker bronze for contrast. Same roles, same names. */
+:root[data-theme="light"] {
+  --color-water-950: #f1f5f8;
+  --color-water-900: #ffffff;
+  --color-water-800: #e9eff4;
+  --color-water-700: #d6e0e8;
+  --color-water-600: #c2cfda;
+  --color-ink: #16242e;
+  --color-ink-muted: #56697a;
+  --color-ink-faint: #8595a3;
+  --color-bronze: #9a6c1c;
+  --color-bronze-deep: #b8862f;
+  --color-bronze-soft: #f3e8cf;
+  --color-gain: #1b9a68;
+  --color-loss: #d24a3c;
+  color-scheme: light;
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+
+html { background: var(--color-water-950); color: var(--color-ink); font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+body { margin: 0; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--color-bronze); }
+:focus-visible { outline: 2px solid var(--color-bronze); outline-offset: 2px; border-radius: 3px; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; }
+th, td { white-space: nowrap; }
+th { font-weight: 500; color: var(--color-ink-muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-water-600); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--color-water-700); vertical-align: middle; }
+th.num, td.num { text-align: right; }
+tbody tr:hover { background: var(--color-water-800); }
+.mono { font-family: var(--font-mono); font-size: 0.92em; }
+.claim { font-size: 26px; line-height: 1.25; font-weight: 500; letter-spacing: -0.01em; text-wrap: balance; }
+.claim b { font-weight: 600; color: var(--color-bronze); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 1px 8px; border-radius: 999px; font-size: 12px; line-height: 18px; background: var(--color-water-700); color: var(--color-ink-muted); white-space: nowrap; }
+.chip.warn { background: var(--color-bronze-soft); color: var(--color-bronze); }
+.dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
+.panel { background: var(--color-water-900); border: 1px solid var(--color-water-700); border-radius: 8px; }
+.gain { color: var(--color-gain); }
+.loss { color: var(--color-loss); }
+@media (prefers-reduced-motion: no-preference) { .fade { animation: fade 240ms ease-out; } }
+@keyframes fade { from { opacity: 0.6; } to { opacity: 1; } }
