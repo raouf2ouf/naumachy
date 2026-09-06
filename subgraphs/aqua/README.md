@@ -39,5 +39,9 @@ Deploying to Studio uploads the build to The Graph's IPFS and starts a test sync
 |---|---|---|---|
 | Ethereum | naumachy-aqua-ethereum | `4M1i7D2FJ8sTtpLWxEcLTBxVwn9ks5M3MQP8R3y1WFnr` | 2026-09-06, v0.1.1 |
 | Base | naumachy-aqua-base | `2V7HrN6cJEQLfucC7XxxTaiKENCkhuqsnqc96AzEZri2` | 2026-09-06, v0.1.1 |
+| Arbitrum | naumachy-aqua-arbitrum | `2C6CWx9D78ZeixFxqozWUxZWzaubJudJEnjdpKiSoct2` | 2026-09-06, v0.1.1 |
+| Optimism | naumachy-aqua-optimism | `HXpJdfgRerrtWNd6kukwvjY2aJw4atHrHEq8GyJvgFsc` | 2026-09-06, v0.1.1 |
+| Polygon | naumachy-aqua-polygon | `9tLnocqtx2cvfvgtzaAuuQZ6L7ZXD7U2SmtyA9Jpdpfi` | 2026-09-06, v0.1.1 |
+| BSC | naumachy-aqua-bsc | `4gkxx7rs2YiKLWSXMAr1sNpyHauN1CqAUrbRtYawMLnf` | 2026-09-06, v0.1.1 |
 
 Gateway: `https://gateway.thegraph.com/api/<api-key>/subgraphs/id/<network id>`.
