@@ -1,9 +1,6 @@
-# Aqua registry subgraph. This file is the Base instance; `graph build --network <name>
-# --network-file networks.json` rewrites addresses, start blocks and the network name
-# from networks.json for the other chains. Both registries share one ABI and one set
-# of handlers; the handler reads `event.address` to tag entities with their registry.
 specVersion: 1.2.0
-description: Aqua registry on one chain. Makers, strategies, fills and legs, from both the canonical and the legacy registry.
+description: Aqua registry on one chain. Makers, strategies, fills and legs,
+  from both the canonical and the legacy registry.
 repository: https://github.com/raouf2ouf/naumachy
 schema:
   file: ./schema.graphql

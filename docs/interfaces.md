@@ -41,23 +41,26 @@ type Desk @entity { id: ID!  # maker-template-chain
   strategies: [Strategy!]! @derivedFrom(field: "desk")
   liveCount: Int!  fillCount: Int!  economicFillCount: Int!  firstSeen: BigInt!  lastSeen: BigInt! }
 
-type Strategy @entity { id: Bytes!  # strategyHash
-  registry: Bytes!  # which Aqua registry emitted it: canonical or legacy
+type Strategy @entity { id: Bytes!  # maker ++ app ++ strategyHash, the key Aqua itself uses
+  strategyHash: Bytes!  registry: Bytes!  # which Aqua registry emitted it: canonical or legacy
   maker: Maker!  app: App!  desk: Desk!  template: Template!
-  program: Bytes!  tokens: [Bytes!]!  amounts: [BigInt!]!
+  blob: Bytes!  # as shipped; keccak(blob) = strategyHash
+  program: Bytes!  parsed: Boolean!  tokens: [Bytes!]!  amounts: [BigInt!]!  # tokens and amounts = declared starting inventory
   shippedAt: BigInt!  shippedTx: Bytes!  dockedAt: BigInt  dockedTx: Bytes
   status: StrategyStatus!  # LIVE | DOCKED
   fills: [Fill!]! @derivedFrom(field: "strategy") }
 
-type Fill @entity { id: ID!  # tx-strategyHash
+type Fill @entity { id: ID!  # tx-strategyId
   registry: Bytes!
   strategy: Strategy!  tx: Bytes!  block: BigInt!  timestamp: BigInt!
   taker: Bytes  # tx.from when available in the mapping (TBD: receipt access)
   legs: [Leg!]! @derivedFrom(field: "fill")
   shape: FillShape!  # PUSH_ONLY | PULL_ONLY | TWO_SIDED | MULTI
-  economic: Boolean!  # TWO_SIDED or MULTI. The only fills that count. }
+  economic: Boolean!  # TWO_SIDED or MULTI. The only fills that count.
+  legCount: Int!  pushedLegs: Int!  pulledLegs: Int! }
 
-type Leg @entity { id: ID!  fill: Fill!  token: Bytes!  net: BigInt!  # push minus pull, per token
+type Leg @entity { id: ID!  # fill-token; mutable, one token can be pushed and pulled in one tx
+  fill: Fill!  token: Bytes!  net: BigInt!  # push minus pull, per token
   pushed: BigInt!  pulled: BigInt! }
 
 type DailyStrategyStat @entity { id: ID!  # strategyHash-day

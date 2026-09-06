@@ -21,11 +21,10 @@ yarn workspace @naumachy/subgraph-aqua build:mainnet    # Ethereum, and so on pe
 
 ## Local graph-node
 
-Point graph-node at an RPC that serves wide historical `eth_getLogs` ranges; the sync is a range scan and a ten-block cap makes the L2s impossible.
+`infra/graph-node/` runs graph-node, IPFS and Postgres for one chain. Point it at an RPC that serves wide historical `eth_getLogs` ranges and `eth_getBlockReceipts`; the sync is a range scan, and every head block is loaded with all of its receipts.
 
-- Base: `https://mainnet.base.org` accepts 10,000-block ranges. Set `GRAPH_ETHEREUM_MAX_BLOCK_RANGE_SIZE=10000`. Full sync from the legacy start block is about half an hour.
-- Arbitrum: `https://arb1.arbitrum.io/rpc` accepts million-block ranges.
-- Ethereum: no public endpoint serves wide ranges. Alchemy's free tier caps ranges at ten blocks and is fine for a one-off overnight sync (`GRAPH_ETHEREUM_MAX_BLOCK_RANGE_SIZE=10`, about 8M compute units). Otherwise deploy to Studio and let the network sync it.
+- Tenderly's gateway does both (Base: million-block ranges, block receipts in one call). Set it as `GRAPH_RPC`.
+- Public endpoints do not survive a graph-node ingestor: Base's own endpoint banned the machine after twenty thousand receipt requests in half an hour. Alchemy's free tier caps log ranges at ten blocks, which makes the L2s impossible to scan.
 - Event handlers only. Call and block handlers need tracing APIs these endpoints do not provide.
 
 ## Studio and the network

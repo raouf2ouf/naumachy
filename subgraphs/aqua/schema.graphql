@@ -14,7 +14,7 @@ enum FillShape {
   MULTI
 }
 
-type Maker @entity {
+type Maker @entity(immutable: false) {
   id: Bytes!                                   # address
   strategies: [Strategy!]! @derivedFrom(field: "maker")
   desks: [Desk!]! @derivedFrom(field: "maker")
@@ -23,13 +23,13 @@ type Maker @entity {
   lastSeen: BigInt!
 }
 
-type App @entity {
+type App @entity(immutable: false) {
   id: Bytes!                                   # router address
   dialect: String!                             # key into the disassembler tables: address plus version
   strategyCount: Int!
 }
 
-type Template @entity {
+type Template @entity(immutable: false) {
   id: Bytes!                                   # keccak(app, opcode sequence); args ignored
   app: App!
   opcodes: [Int!]!                             # raw opcode bytes in program order
@@ -38,7 +38,7 @@ type Template @entity {
   economicVolumeLegs: Int!
 }
 
-type Desk @entity {
+type Desk @entity(immutable: false) {
   id: ID!                                      # maker-template-chain
   maker: Maker!
   template: Template!
@@ -51,15 +51,18 @@ type Desk @entity {
   lastSeen: BigInt!
 }
 
-type Strategy @entity {
-  id: Bytes!                                   # strategyHash
+type Strategy @entity(immutable: false) {
+  id: Bytes!                                   # maker ++ app ++ strategyHash, the key Aqua itself uses
+  strategyHash: Bytes!
   registry: Bytes!                             # the Aqua registry that emitted it: canonical or legacy
   maker: Maker!
   app: App!
   desk: Desk!
   template: Template!
-  program: Bytes!
-  tokens: [Bytes!]!
+  blob: Bytes!                                 # the bytes as shipped; keccak(blob) = strategyHash
+  program: Bytes!                              # the program extracted from the blob
+  parsed: Boolean!                             # opcode walk landed on the end of the program
+  tokens: [Bytes!]!                            # declared starting inventory, from the ship transaction
   amounts: [BigInt!]!
   shippedAt: BigInt!
   shippedTx: Bytes!
@@ -69,8 +72,8 @@ type Strategy @entity {
   fills: [Fill!]! @derivedFrom(field: "strategy")
 }
 
-type Fill @entity {
-  id: ID!                                      # tx-strategyHash
+type Fill @entity(immutable: false) {
+  id: ID!                                      # tx-strategyId
   registry: Bytes!
   strategy: Strategy!
   tx: Bytes!
@@ -80,10 +83,13 @@ type Fill @entity {
   legs: [Leg!]! @derivedFrom(field: "fill")
   shape: FillShape!                            # recomputed as legs arrive within the transaction
   economic: Boolean!                           # TWO_SIDED or MULTI. The only fills that count.
+  legCount: Int!
+  pushedLegs: Int!                             # legs with net > 0
+  pulledLegs: Int!                             # legs with net < 0
 }
 
-type Leg @entity(immutable: true) {
-  id: ID!                                      # fill-token
+type Leg @entity(immutable: false) {
+  id: ID!                                      # fill-token. Mutable: one token can be pushed and pulled in one tx
   fill: Fill!
   token: Bytes!
   net: BigInt!                                 # push minus pull, per token
@@ -91,7 +97,7 @@ type Leg @entity(immutable: true) {
   pulled: BigInt!
 }
 
-type DailyStrategyStat @entity {
+type DailyStrategyStat @entity(immutable: false) {
   id: ID!                                      # strategyHash-day
   strategy: Strategy!
   day: Int!
