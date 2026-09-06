@@ -13,7 +13,7 @@
     "build:bsc": "graph build --network bsc --network-file networks.json",
     "create:local": "graph create --node http://localhost:8020/ naumachy/aqua",
     "deploy:local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 --version-label v0.1.1 naumachy/aqua",
-    "deploy:studio": "graph deploy --studio",
+    "deploy:studio": "graph deploy naumachy-aqua-ethereum",
     "test": "graph test"
   },
   "devDependencies": {

@@ -32,3 +32,12 @@ yarn workspace @naumachy/subgraph-aqua build:mainnet    # Ethereum, and so on pe
 Deploying to Studio uploads the build to The Graph's IPFS and starts a test sync on their nodes. Publishing from Studio records the deployment onchain (one transaction on Arbitrum One) and the network's indexers pick it up. Queries go through the gateway with an API key created in Studio. Only the network deployment counts for the judges.
 
 `indexerHints.prune: auto` keeps indexers lean; time-travel queries are not part of the design.
+
+## Published
+
+| chain | Studio slug | network id | published |
+|---|---|---|---|
+| Ethereum | naumachy-aqua-ethereum | `4M1i7D2FJ8sTtpLWxEcLTBxVwn9ks5M3MQP8R3y1WFnr` | 2026-09-06, v0.1.1 |
+| Base | naumachy-aqua-base | `2V7HrN6cJEQLfucC7XxxTaiKENCkhuqsnqc96AzEZri2` | 2026-09-06, v0.1.1 |
+
+Gateway: `https://gateway.thegraph.com/api/<api-key>/subgraphs/id/<network id>`.
