@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import pg from "pg";
-import { health, overview, desks, desk, strategy, search } from "./queries.js";
+import { health, overview, series, desks, desk, strategy, search } from "./queries.js";
 
 const pool = new pg.Pool({ connectionString: process.env.AQUASCAN_DATABASE_URL ?? "postgres://aquascan:aquascan@localhost:5433/aquascan", max: 8 });
 const port = Number(process.env.AQUASCAN_API_PORT ?? 3100);
@@ -9,10 +9,11 @@ type Handler = (url: URL, params: string[]) => Promise<unknown>;
 const routes: [RegExp, Handler][] = [
   [/^\/api\/health$/, () => health(pool)],
   [/^\/api\/overview$/, (u) => overview(pool, u.searchParams.get("window"), u.searchParams.get("chain"))],
+  [/^\/api\/series$/, (u) => series(pool, u.searchParams.get("window"), u.searchParams.get("chain"))],
   [/^\/api\/desks$/, (u) => desks(pool, u.searchParams.get("chain"), u.searchParams.get("sort"), Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 0))],
   [/^\/api\/leaderboard$/, (u) => desks(pool, u.searchParams.get("chain"), u.searchParams.get("sort") ?? "edge", Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 1000))],
-  [/^\/api\/desk\/([a-z]+)\/([^/]+)$/, (_u, [chain, id]) => desk(pool, chain, decodeURIComponent(id))],
-  [/^\/api\/strategy\/([a-z]+)\/([^/]+)$/, (_u, [chain, id]) => strategy(pool, chain, decodeURIComponent(id))],
+  [/^\/api\/desk\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => desk(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
+  [/^\/api\/strategy\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => strategy(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/search$/, (u) => search(pool, u.searchParams.get("q") ?? "")],
 ];
 
