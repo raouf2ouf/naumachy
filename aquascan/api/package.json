@@ -1,0 +1,22 @@
+{
+  "name": "@naumachy/aquascan-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Read-only JSON API over the enrichment database. Every priced number carries its provenance.",
+  "scripts": {
+    "dev": "node --env-file=../../.env --import tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
