@@ -1,0 +1,13 @@
+# Postgres for the Aquascan enrichment service. Local only: bound to 127.0.0.1:5433.
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: aquascan
+      POSTGRES_PASSWORD: aquascan
+      POSTGRES_DB: aquascan
+    volumes:
+      - ../data/aquascan/postgres:/var/lib/postgresql/data

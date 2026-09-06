@@ -1,0 +1,83 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadConfig, type ChainName } from "./config.js";
+import { createPool, migrate } from "./db.js";
+import { createPacer } from "./pacer.js";
+import { Gateway } from "./gateway.js";
+import { syncStrategies } from "./lanes/strategies.js";
+import { syncFills } from "./lanes/fills.js";
+import { syncPrices } from "./lanes/prices.js";
+import { syncTokens } from "./lanes/tokens.js";
+import { Llama } from "./llama.js";
+import { rollup } from "./rollup.js";
+import { status, formatStatus } from "./status.js";
+
+const log = (...parts: unknown[]) => console.log(new Date().toISOString(), ...parts);
+
+function parseArgs(argv: string[]) {
+  const once = argv.includes("--once");
+  const statusOnly = argv.includes("--status");
+  const chainsArg = argv.find((a) => a.startsWith("--chains="));
+  const only = chainsArg ? (chainsArg.slice("--chains=".length).split(",") as ChainName[]) : undefined;
+  return { once, statusOnly, only };
+}
+
+async function main() {
+  const { once, statusOnly, only } = parseArgs(process.argv.slice(2));
+  const config = loadConfig(process.env, only);
+  const pool = createPool(config.databaseUrl);
+  const applied = await migrate(pool, join(dirname(fileURLToPath(import.meta.url)), "..", "sql"));
+  if (applied.length) log("migrations applied:", applied.join(", "));
+
+  if (statusOnly) {
+    console.log(formatStatus(await status(pool)));
+    await pool.end();
+    return;
+  }
+
+  for (const c of config.chains) {
+    await pool.query(`INSERT INTO chains (name, subgraph_id) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET subgraph_id = EXCLUDED.subgraph_id`, [c.name, c.subgraphId]);
+  }
+  const paced = createPacer(config.gatewayCallsPerMinute);
+  const bySubgraph = new Map(config.chains.map((c) => [c.subgraphId, c.name]));
+  const gateway = new Gateway(config.apiKey, paced, (subgraphId) => {
+    const name = bySubgraph.get(subgraphId);
+    if (name) void pool.query(`UPDATE chains SET gateway_calls = gateway_calls + 1 WHERE name = $1`, [name]);
+  });
+  const llama = new Llama(createPacer(config.llamaCallsPerMinute));
+  const rpcPaced = createPacer(30);
+  log(`enrich: ${config.chains.map((c) => c.name).join(", ")} | ${config.gatewayCallsPerMinute} gateway calls/min | defillama ${config.llamaCallsPerMinute}/min, ${config.llamaCallsPerPass}/pass | poll ${config.pollSeconds}s`);
+
+  for (;;) {
+    for (const c of config.chains) {
+      try {
+        const s = await syncStrategies(pool, gateway, c.name, c.subgraphId, config.pageSize);
+        const f = await syncFills(pool, gateway, c.name, c.subgraphId, config.pageSize);
+        log(`${c.name}: ships +${s.ships.rows} (${s.ships.pages}p) docks +${s.docks.rows} (${s.docks.pages}p) fills +${f.rows} (${f.pages}p) cursor ${f.cursor} head ${f.head}`);
+      } catch (err) {
+        log(`${c.name}: error ${String(err).slice(0, 200)}`);
+      }
+    }
+    try {
+      const p = await syncPrices(pool, llama, config.llamaCallsPerPass);
+      log(`prices: ${p.targets} targets, ${p.calls} calls, +${p.priced} priced, ${p.missed} missed`);
+      const rpcs = Object.fromEntries(config.chains.map((c) => [c.name, config.rpcByChain[c.name]]));
+      const t = await syncTokens(pool, rpcs, rpcPaced);
+      if (t.asked) log(`tokens: ${t.resolved}/${t.asked} resolved from chain`);
+    } catch (err) {
+      log(`prices: error ${String(err).slice(0, 200)}`);
+    }
+    try {
+      const r = await rollup(pool);
+      log(`rollup: ${r.fills} fills valued, ${r.strategies} strategies, ${r.desks} desks in ${r.durationMs} ms`);
+    } catch (err) {
+      log(`rollup: error ${String(err).slice(0, 300)}`);
+    }
+    console.log(formatStatus(await status(pool)));
+    if (once) break;
+    await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));
+  }
+  await pool.end();
+}
+
+main().catch((err) => { console.error(err); process.exit(1); });

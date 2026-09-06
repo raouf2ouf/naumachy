@@ -1,0 +1,24 @@
+{
+  "name": "@naumachy/aquascan-enrich",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reads the Aqua subgraphs through the gateway and derives what the explorer shows.",
+  "scripts": {
+    "dev": "node --env-file=../../.env --import tsx src/main.ts",
+    "once": "node --env-file=../../.env --import tsx src/main.ts --once",
+    "status": "node --env-file=../../.env --import tsx src/main.ts --status",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
