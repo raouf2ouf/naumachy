@@ -12,6 +12,9 @@ Short, dated, one line each. Newest at the top of each list. Anyone's AI session
 - 2026-09-05 Ownership by vertical: Raouf = Rudis (contracts, agents, arena, Ledger); Kate = Aquascan (subgraphs, substreams, aquascan, mcp, video script, feedback docs). Equal skills assumed.
 - 2026-09-05 License: MIT for our code; 1inch repos as submodules under Degensoft 1.1.
 
+- 2026-09-06 Chain roster for the Aqua subgraph: all six chains where Aqua has activity (Ethereum, BSC, Polygon, Base, Arbitrum, Optimism). One codebase, one manifest per network from a shared template. Publish order: Ethereum first, Base second, the other four as one batch once the mappings are proven on Ethereum, so a mapping bug never costs six resyncs.
+- 2026-09-06 Both Aqua registries are indexed. The canonical registry `0x1111113ccf1426a8e30e2bff5e005d929bf6a90a` (July 2026, the one 1inch documents) and the legacy registry `0x499943e74fb0ce105688beee8ef2abec5d936d31` (March 2026; activity on Ethereum, Base and Arbitrum only, verified on chain). Same ABI and handlers as a second data source, a `registry` field on Strategy and Fill, the explorer defaults to canonical and badges legacy. Start block per chain and registry is the deployment block.
+
 ## Assumed (proceeding, not yet confirmed)
 
 - Live arena chain = Base. Alternate: Arbitrum.

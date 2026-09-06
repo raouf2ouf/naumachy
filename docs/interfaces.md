@@ -4,7 +4,21 @@ Draft. Fields marked TBD are decided at the milestone that first needs them. Cha
 
 ## 1. Aqua subgraph (per chain) - `subgraphs/aqua`
 
-Source: the Aqua registry at `0x1111113ccf1426a8e30e2bff5e005d929bf6a90a` on each chain, events `Shipped`, `Docked`, `Pulled`, `Pushed`. Start block per chain = Aqua deployment block (TBD per chain, from the deployment tx).
+Source: two Aqua registries on each chain, same ABI, events `Shipped`, `Docked`, `Pulled`, `Pushed` (no parameter is indexed; the signatures are identical across every Aqua release).
+
+- Canonical registry `0x1111113ccf1426a8e30e2bff5e005d929bf6a90a` (July 2026, the address 1inch documents).
+- Legacy registry `0x499943e74fb0ce105688beee8ef2abec5d936d31` (March 2026; activity on Ethereum, Base and Arbitrum only). Indexed as a second data source so nothing is missed; entities carry `registry` and the explorer badges legacy.
+
+Start blocks, verified on chain. Canonical = the registry's deployment block (its first log). Legacy = its first event on chains with history, otherwise the canonical deployment block, so the data source exists everywhere and nothing is scanned twice.
+
+| network (manifest name) | canonical start | legacy start |
+|---|---|---|
+| Ethereum (`mainnet`) | 25567141 | 24517760 |
+| Base (`base`) | 48839900 | 38495747 |
+| Arbitrum (`arbitrum-one`) | 485505646 | 403010640 |
+| Optimism (`optimism`) | 154434383 | 154434383 |
+| Polygon (`matic`) | 90508403 | 90508403 |
+| BSC (`bsc`) | 110908635 | 110908635 |
 
 Entities (draft):
 
@@ -28,6 +42,7 @@ type Desk @entity { id: ID!  # maker-template-chain
   liveCount: Int!  fillCount: Int!  economicFillCount: Int!  firstSeen: BigInt!  lastSeen: BigInt! }
 
 type Strategy @entity { id: Bytes!  # strategyHash
+  registry: Bytes!  # which Aqua registry emitted it: canonical or legacy
   maker: Maker!  app: App!  desk: Desk!  template: Template!
   program: Bytes!  tokens: [Bytes!]!  amounts: [BigInt!]!
   shippedAt: BigInt!  shippedTx: Bytes!  dockedAt: BigInt  dockedTx: Bytes
@@ -35,6 +50,7 @@ type Strategy @entity { id: Bytes!  # strategyHash
   fills: [Fill!]! @derivedFrom(field: "strategy") }
 
 type Fill @entity { id: ID!  # tx-strategyHash
+  registry: Bytes!
   strategy: Strategy!  tx: Bytes!  block: BigInt!  timestamp: BigInt!
   taker: Bytes  # tx.from when available in the mapping (TBD: receipt access)
   legs: [Leg!]! @derivedFrom(field: "fill")
