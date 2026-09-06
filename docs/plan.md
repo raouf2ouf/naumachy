@@ -19,11 +19,11 @@ Every gate is a checkbox. A task that moves no gate is a task we question.
 
 Track A, composable or standardized products:
 - [ ] GA.1 Two or more Graph products composed: subgraphs (Aqua per chain, arena), a Substreams package (SwapVM dialect disassembler) feeding a substreams-powered subgraph, and the Subgraph MCP as the agents' query layer.
-- [ ] GA.2 Live data from a Graph provider: published on The Graph Network, queried through the gateway with an API key. Studio-only does not count.
+- [x] GA.2 Live data from a Graph provider: published on The Graph Network, queried through the gateway with an API key. Studio-only does not count. Done 2026-09-06: six Aqua subgraphs published (ids in `subgraphs/aqua/README.md`), served through the gateway, read by `aquascan/enrich`.
 - [ ] GA.3 Public repo, 2 to 4 minute demo.
 
 Track B, AI tooling or AI use case:
-- [ ] GB.1 The Graph is load-bearing: the gladiators read the corpus and rivals' fills through the Subgraph MCP; Aquascan's chain data is Graph-sourced with no other chain lane.
+- [ ] GB.1 The Graph is load-bearing: the gladiators read the corpus and rivals' fills through the Subgraph MCP; Aquascan's chain data is Graph-sourced with no other chain lane. Aquascan side done 2026-09-06: the enrichment service reads only the six gateways; prices come from DefiLlama, which is not chain data. Gladiator side open.
 - [ ] GB.2 Meaningful work with the data: strategy authoring and mutation decisions, plus the Aquascan analyst.
 - [ ] GB.3 Correct pool selected at submission: from scratch.
 

@@ -7,7 +7,7 @@ Draft. Fields marked TBD are decided at the milestone that first needs them. Cha
 Source: two Aqua registries on each chain, same ABI, events `Shipped`, `Docked`, `Pulled`, `Pushed` (no parameter is indexed; the signatures are identical across every Aqua release).
 
 - Canonical registry `0x1111113ccf1426a8e30e2bff5e005d929bf6a90a` (July 2026, the address 1inch documents).
-- Legacy registry `0x499943e74fb0ce105688beee8ef2abec5d936d31` (March 2026; activity on Ethereum, Base and Arbitrum only). Indexed as a second data source so nothing is missed; entities carry `registry` and the explorer badges legacy.
+- Legacy registry `0x499943e74fb0ce105688beee8ef2abec5d936d31` (first fills November 2025 on Base and Arbitrum, February 2026 on Ethereum; no activity elsewhere). Indexed as a second data source so nothing is missed; entities carry `registry` and the explorer badges legacy.
 
 Start blocks, verified on chain. Canonical = the registry's deployment block (its first log). Legacy = its first event on chains with history, otherwise the canonical deployment block, so the data source exists everywhere and nothing is scanned twice.
 
