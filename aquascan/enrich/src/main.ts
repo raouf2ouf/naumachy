@@ -9,6 +9,7 @@ import { syncFills } from "./lanes/fills.js";
 import { syncTemplates } from "./lanes/templates.js";
 import { syncPrices } from "./lanes/prices.js";
 import { syncTokens } from "./lanes/tokens.js";
+import { syncFees } from "./lanes/fees.js";
 import { Llama } from "./llama.js";
 import { rollup } from "./rollup.js";
 import { status, formatStatus } from "./status.js";
@@ -18,13 +19,14 @@ const log = (...parts: unknown[]) => console.log(new Date().toISOString(), ...pa
 function parseArgs(argv: string[]) {
   const once = argv.includes("--once");
   const statusOnly = argv.includes("--status");
+  const rollupOnly = argv.includes("--rollup");
   const chainsArg = argv.find((a) => a.startsWith("--chains="));
   const only = chainsArg ? (chainsArg.slice("--chains=".length).split(",") as ChainName[]) : undefined;
-  return { once, statusOnly, only };
+  return { once, statusOnly, rollupOnly, only };
 }
 
 async function main() {
-  const { once, statusOnly, only } = parseArgs(process.argv.slice(2));
+  const { once, statusOnly, rollupOnly, only } = parseArgs(process.argv.slice(2));
   const config = loadConfig(process.env, only);
   const pool = createPool(config.databaseUrl);
   const applied = await migrate(pool, join(dirname(fileURLToPath(import.meta.url)), "..", "sql"));
@@ -32,6 +34,14 @@ async function main() {
 
   if (statusOnly) {
     console.log(formatStatus(await status(pool)));
+    await pool.end();
+    return;
+  }
+  if (rollupOnly) {
+    const f = await syncFees(pool);
+    log(`fees: ${f.decoded} decoded, ${f.unknown} unknown`);
+    const r = await rollup(pool);
+    log(`rollup: ${r.fills} fills valued (${r.tapeFills} on the tape), ${r.strategies} strategies, ${r.desks} desks in ${r.durationMs} ms`);
     await pool.end();
     return;
   }
@@ -66,12 +76,14 @@ async function main() {
       const rpcs = Object.fromEntries(config.chains.map((c) => [c.name, config.rpcByChain[c.name]]));
       const t = await syncTokens(pool, rpcs, rpcPaced);
       if (t.asked) log(`tokens: ${t.resolved}/${t.asked} resolved from chain`);
+      const f = await syncFees(pool);
+      if (f.decoded || f.unknown) log(`fees: ${f.decoded} decoded, ${f.unknown} unknown`);
     } catch (err) {
       log(`prices: error ${String(err).slice(0, 200)}`);
     }
     try {
       const r = await rollup(pool);
-      log(`rollup: ${r.fills} fills valued, ${r.strategies} strategies, ${r.desks} desks in ${r.durationMs} ms`);
+      log(`rollup: ${r.fills} fills valued (${r.tapeFills} on the tape), ${r.strategies} strategies, ${r.desks} desks in ${r.durationMs} ms`);
     } catch (err) {
       log(`rollup: error ${String(err).slice(0, 300)}`);
     }

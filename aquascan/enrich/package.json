@@ -8,6 +8,7 @@
     "dev": "node --env-file=../../.env --import tsx src/main.ts",
     "once": "node --env-file=../../.env --import tsx src/main.ts --once",
     "status": "node --env-file=../../.env --import tsx src/main.ts --status",
+    "rollup": "node --env-file=../../.env --import tsx src/main.ts --rollup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

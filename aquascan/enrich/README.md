@@ -31,8 +31,16 @@ For every leg token of every economic fill, the fill hour plus one hour and one 
 
 The rollup runs after each pass and recomputes, in one transaction: `fill_values` (volume, edge and markouts per economic fill, NULL when any leg is unpriced), `strategy_marks` (the strategy's own 24h VWAP per base against its numeraire), `strategy_stats` (fills, dollar figures with a priced ratio, pair-native P&L in the quote token with its coverage, position marked at latest prices, taker concentration, self fills), `desk_stats` and `daily_stats`. The numeraire is a stablecoin when the strategy touched one, else its most traded token.
 
-Sign conventions: `edge_usd` is the value of the maker's net legs at the fill hour, positive when the maker gained; `markout_1h_usd` is how the position taken in the fill moved one hour later, negative under adverse selection.
+## Milestone 4: the venue as its own reference, and fees
+
+Every two-sided fill is placed on its pair's tape: the volume-weighted price of the same pair's other fills (other makers and other takers) in the narrowest window around the fill minute that holds one, widening to 15 minutes; the references 5 minutes, 1 hour and 1 day later start at the horizon, run forward (2 then 15 minutes, 5 then 60, 30 then 360) and leave out the maker's own prints. Sums are exact numerics, prints under half a dollar do not count, and a reference outside a factor of two of the fill's own price is refused. Dollars come from the hourly price of the pair's quote token. Fills with no reference fall back to hourly dollar prices and carry `ref_kind = 'hourly'`.
+
+Fees are decoded once per strategy from its program (`strategy_fees`): the flat maker fee and its side, the protocol fee rate and recipient, or the dynamic fee provider. Per fill, `protocol_fee_usd` is the sliver pulled out of the maker's ledger on the token it received, valued at the fill hour; `maker_fee_usd` is the program's rate applied to the fill's volume.
+
+Sign conventions: `edge_usd` is the fill against the reference at fill time, positive when the maker captured spread; `markout_5m_usd`, `markout_1h_usd` and `markout_24h_usd` are the fill re-marked at the reference that much later (edge plus drift); `drift_1h_usd` and `drift_24h_usd` are markout minus edge, negative under adverse selection. The five-minute figure is the headline: it is the edge once the market has re-priced. Strategy and desk stats carry the volume-weighted markout in bps (`markout_5m_bps`, `markout_1h_bps`) with a standard error from the spread of their own fills.
+
+`yarn workspace @naumachy/aquascan-enrich rollup` decodes new fees and recomputes the derived tables once, without touching the gateway.
 
 ## Next
 
-Token API candles for same-pair markout references; labels; the read-only API.
+A CEX minute series as a second lens for listed tokens; labels for the big makers.
