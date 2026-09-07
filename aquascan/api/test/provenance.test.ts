@@ -22,8 +22,8 @@ describe("windowSeconds", () => {
 describe("refSource", () => {
   it("names the tape, the hourly fallback, or the mix", async () => {
     const { refSource } = await import("../src/provenance.js");
-    expect(refSource(1)).toBe("venue tape, by the minute");
+    expect(refSource(1)).toBe("venue tape or same-chain pools, by the minute");
     expect(refSource(0)).toBe("defillama hourly");
-    expect(refSource(0.85)).toBe("venue tape for 85% of fills, defillama hourly for the rest");
+    expect(refSource(0.85)).toBe("venue tape or same-chain pools for 85% of fills, defillama hourly for the rest");
   });
 });

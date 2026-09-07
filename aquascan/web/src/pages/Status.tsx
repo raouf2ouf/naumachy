@@ -14,7 +14,7 @@ export function Status() {
       <p className="text-ink-muted text-[13px] mt-1 max-w-2xl">Where each chain's lane stands against its subgraph, and how much of it is priced. Rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}.</p>
       <div className="overflow-x-auto panel mt-5">
         <table>
-          <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">On the tape</th><th className="num">Updated</th></tr></thead>
+          <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">By the minute</th><th className="num">Updated</th></tr></thead>
           <tbody>{h.chains.map((c) => (
             <tr key={c.chain}>
               <td>{CHAIN_NAME[c.chain]}</td>
@@ -28,7 +28,7 @@ export function Status() {
             </tr>))}</tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-faint mt-4 max-w-2xl">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills that carry a dollar figure; on the tape is the share of those whose reference price came from the pair's other fills within minutes rather than from DefiLlama's hourly price.</p>
+      <p className="text-xs text-ink-faint mt-4 max-w-2xl">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills that carry a dollar figure; by the minute is the share of those whose reference price came from prints within minutes, the pair's other fills or a same-chain pool, rather than from DefiLlama's hourly price.</p>
     </div>
   );
 }

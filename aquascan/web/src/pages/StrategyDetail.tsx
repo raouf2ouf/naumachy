@@ -59,7 +59,7 @@ export function StrategyDetail() {
 
       {st ? <ScoreTiles s={st} /> : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
       {st && (
-        <p className="text-xs text-ink-faint mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against the pair's other prints within minutes, the rest against hourly prices.</> : <>Scored against hourly prices: no other prints of this pair nearby.</>}</p>
+        <p className="text-xs text-ink-faint mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices.</> : <>Scored against hourly prices: no prints of this pair nearby, on the tape or in a pool.</>}</p>
       )}
 
       <div className="mt-4 panel px-5 py-4 text-[13px]">

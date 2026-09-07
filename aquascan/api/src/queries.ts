@@ -19,8 +19,13 @@ async function rollupAt(pool: Pool): Promise<Date> {
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 const ratio = (part: unknown, whole: unknown) => (Number(whole) ? Number(part) / Number(whole) : 0);
 // The reference behind one fill's numbers.
-const fillSource = (f: { ref_kind: string | null; ref_fills: unknown; ref_window_min: unknown }) =>
-  f.ref_kind === "tape" ? `venue tape, ${Number(f.ref_fills)} other fills within ${Number(f.ref_window_min) === 0 ? "the minute" : `${Number(f.ref_window_min)} min`}` : HOURLY;
+const fillSource = (f: { ref_kind: string | null; ref_fills: unknown; ref_window_min: unknown }) => {
+  const win = Number(f.ref_window_min) === 0 ? "the minute" : `${Number(f.ref_window_min)} min`;
+  if (f.ref_kind === "tape") return `venue tape, ${Number(f.ref_fills)} other fills within ${win}`;
+  if (f.ref_kind === "pool") return `same-chain pool, ${Number(f.ref_fills)} swaps within ${win}`;
+  if (f.ref_kind === "hop") return `venue tape through a hub pool, ${Number(f.ref_fills)} prints within ${win}`;
+  return HOURLY;
+};
 
 // Volume-weighted markout in bps and its standard error by the delta method, over a set of fills.
 const ratioBps = (col: string, alias: string, vol = "volume_usd") => `
@@ -37,7 +42,7 @@ function scored(r: Record<string, unknown>, pr: number, tape: number, at: Date) 
   return {
     volume_usd: priced(r.volume_usd as number, pr, at, HOURLY),
     edge_usd: priced(r.edge_usd as number, pr, at, ref),
-    markout_5m_usd: priced(r.markout_5m_usd as number, pr, at, "venue tape, by the minute"),
+    markout_5m_usd: priced(r.markout_5m_usd as number, pr, at, "venue tape or same-chain pools, by the minute"),
     markout_1h_usd: priced(r.markout_1h_usd as number, pr, at, ref),
     markout_24h_usd: priced(r.markout_24h_usd as number, pr, at, ref),
     drift_1h_usd: priced(r.drift_1h_usd as number, pr, at, ref),
@@ -147,7 +152,7 @@ export async function series(pool: Pool, window: string | null, chain: string | 
     SELECT day, sum(fills) AS fills, sum(volume_usd) AS volume, sum(edge_usd) AS edge, sum(markout_5m_usd) AS markout_5m, sum(markout_1h_usd) AS markout_1h,
            sum(drift_1h_usd) AS drift_1h, sum(protocol_fee_usd) AS protocol_fee, sum(maker_fee_usd) AS maker_fee
     FROM daily_stats WHERE day >= $1 AND ($2::text IS NULL OR chain = $2) GROUP BY day ORDER BY day`, [sinceDay, c]);
-  return { window: w.name, chain: c ?? "all", rollup_at: at.toISOString(), source: "venue tape by the minute where the pair has other prints, defillama hourly otherwise",
+  return { window: w.name, chain: c ?? "all", rollup_at: at.toISOString(), source: "venue tape or same-chain pools by the minute where the pair has prints, defillama hourly otherwise",
     days: rows.map((r) => ({ day: Number(r.day), date: new Date(Number(r.day) * 86400 * 1000).toISOString().slice(0, 10), fills: Number(r.fills),
       volume_usd: num(r.volume), edge_usd: num(r.edge), markout_5m_usd: num(r.markout_5m), markout_1h_usd: num(r.markout_1h), drift_1h_usd: num(r.drift_1h),
       protocol_fee_usd: num(r.protocol_fee), maker_fee_usd: num(r.maker_fee) })) };
@@ -200,6 +205,7 @@ export async function desk(pool: Pool, chain: string, id: string, offset = 0, li
   const { rows: strategies } = await pool.query(`
     SELECT s.id, s.strategy_hash, s.registry, s.status, s.shipped_at, s.docked_at, st.fills, st.volume_usd, st.edge_usd, st.markout_5m_usd, st.markout_1h_usd, st.drift_1h_usd,
            st.protocol_fee_usd, st.maker_fee_usd, st.tape_fills, st.priced_fills, sf.maker_fee_bps, sf.protocol_fee_bps,
+           st.markout_5m_bps, st.markout_5m_bps_se, st.markout_1h_bps, st.markout_1h_bps_se,
            st.pnl_quote, st.quote_token, tq.symbol AS quote_symbol, st.pnl_quote_coverage, st.priced_ratio, st.takers, st.top_taker_share, st.self_fills
     FROM strategies s LEFT JOIN strategy_stats st ON st.chain = s.chain AND st.strategy_id = s.id
     LEFT JOIN strategy_fees sf ON sf.chain = s.chain AND sf.strategy_id = s.id
@@ -244,6 +250,7 @@ export async function strategy(pool: Pool, chain: string, id: string, offset = 0
     SELECT s.*, encode(s.program, 'hex') AS program_hex, tp.name AS template_name, tp.kind AS template_kind, tp.instructions, la.label AS app_label, lm.label AS maker_label,
            st.fills, st.first_fill_ts, st.last_fill_ts, st.volume_usd, st.edge_usd, st.markout_5m_usd, st.markout_1h_usd, st.markout_24h_usd, st.drift_1h_usd, st.drift_24h_usd,
            st.protocol_fee_usd, st.maker_fee_usd, st.tape_fills, st.priced_fills,
+           st.markout_5m_bps, st.markout_5m_bps_se, st.markout_1h_bps, st.markout_1h_bps_se,
            st.priced_ratio, st.quote_token, st.pnl_quote, st.pnl_quote_coverage, st.mark_age_s, st.pnl_usd_marked, st.takers, st.top_taker_share, st.self_fills,
            sf.maker_fee_bps, sf.maker_fee_side, sf.maker_fee_kind, sf.protocol_fee_bps, sf.protocol_fee_to, sf.protocol_fee_kind, sf.protocol_fee_provider, sf.decoded AS fees_decoded
     FROM strategies s LEFT JOIN strategy_stats st ON st.chain = s.chain AND st.strategy_id = s.id

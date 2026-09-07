@@ -10,6 +10,7 @@ import { syncTemplates } from "./lanes/templates.js";
 import { syncPrices } from "./lanes/prices.js";
 import { syncTokens } from "./lanes/tokens.js";
 import { syncFees } from "./lanes/fees.js";
+import { syncPools } from "./lanes/pools.js";
 import { Llama } from "./llama.js";
 import { rollup } from "./rollup.js";
 import { status, formatStatus } from "./status.js";
@@ -20,13 +21,14 @@ function parseArgs(argv: string[]) {
   const once = argv.includes("--once");
   const statusOnly = argv.includes("--status");
   const rollupOnly = argv.includes("--rollup");
+  const poolsOnly = argv.includes("--pools");
   const chainsArg = argv.find((a) => a.startsWith("--chains="));
   const only = chainsArg ? (chainsArg.slice("--chains=".length).split(",") as ChainName[]) : undefined;
-  return { once, statusOnly, rollupOnly, only };
+  return { once, statusOnly, rollupOnly, poolsOnly, only };
 }
 
 async function main() {
-  const { once, statusOnly, rollupOnly, only } = parseArgs(process.argv.slice(2));
+  const { once, statusOnly, rollupOnly, poolsOnly, only } = parseArgs(process.argv.slice(2));
   const config = loadConfig(process.env, only);
   const pool = createPool(config.databaseUrl);
   const applied = await migrate(pool, join(dirname(fileURLToPath(import.meta.url)), "..", "sql"));
@@ -34,6 +36,15 @@ async function main() {
 
   if (statusOnly) {
     console.log(formatStatus(await status(pool)));
+    await pool.end();
+    return;
+  }
+  const dexGateway = new Gateway(config.apiKey, createPacer(config.dexCallsPerMinute));
+  if (poolsOnly) {
+    const p = await syncPools(pool, dexGateway, config.dexes, config.pageSize);
+    log(`pools: ${p.routed} pairs routed, ${p.pools} pools, +${p.swaps} swaps, ${p.calls} gateway calls`);
+    const r = await rollup(pool);
+    log(`rollup: ${r.fills} fills valued (${r.tapeFills} on the tape), ${r.strategies} strategies, ${r.desks} desks in ${r.durationMs} ms`);
     await pool.end();
     return;
   }
@@ -78,6 +89,8 @@ async function main() {
       if (t.asked) log(`tokens: ${t.resolved}/${t.asked} resolved from chain`);
       const f = await syncFees(pool);
       if (f.decoded || f.unknown) log(`fees: ${f.decoded} decoded, ${f.unknown} unknown`);
+      const pl = await syncPools(pool, dexGateway, config.dexes, config.pageSize);
+      if (pl.calls) log(`pools: ${pl.routed} pairs routed, ${pl.pools} pools, +${pl.swaps} swaps, ${pl.calls} gateway calls`);
     } catch (err) {
       log(`prices: error ${String(err).slice(0, 200)}`);
     }

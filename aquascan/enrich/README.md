@@ -41,6 +41,12 @@ Sign conventions: `edge_usd` is the fill against the reference at fill time, pos
 
 `yarn workspace @naumachy/aquascan-enrich rollup` decodes new fees and recomputes the derived tables once, without touching the gateway.
 
+## Milestone 5: same-chain pools where the tape is thin
+
+Once a day the lane decides a route for every pair of the last 30 days (`pair_routes`): the tape when the pair prints at least ten times an hour; else the deepest pool of the exact pair with at least 120 swaps in 30 days; else a hop through a hub (WETH, USDC, USDT; WBNB on BSC), the dense leg on the tape and the other in a pool; else hourly. Routed pools are read from published DEX subgraphs with the Uniswap v3 schema (`pools`, `pool_swaps`, paged by timestamp with a bounded number of pages per pass so a deep pool backfills over a few passes). In the rollup, pool swaps become prints on the same tape machinery under their own source, and a hop multiplies its two legs. `ref_kind` says which route priced a fill: `tape`, `pool`, `hop` or `hourly`. Before a print can serve as a reference it must sit within a tolerance of its pair's yardstick for the hour (the hourly dollar ratio when both tokens are priced, else the pair's median print; half a percent between stables, two percent between majors, five otherwise); a reference needs two prints and must fall within a factor of 1.4 of the fill's own price.
+
+`yarn workspace @naumachy/aquascan-enrich pools` decides routes, reads swaps and recomputes once. DEX subgraphs default per chain in `src/config.ts` and can be overridden with `DEX_SUBGRAPH_ID_<CHAIN>`; chains without one keep hourly references.
+
 ## Next
 
-A CEX minute series as a second lens for listed tokens; labels for the big makers.
+Labels for the big makers; DEX subgraphs for Base, Arbitrum, Optimism and Polygon once healthy ones are found.

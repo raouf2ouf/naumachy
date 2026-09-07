@@ -34,6 +34,11 @@ export class Gateway {
         continue;
       }
       const body = (await res.json()) as { data?: T; errors?: { message: string }[] };
+      // an indexer that is down or answers garbage is the gateway's problem for a minute, not ours
+      if (!body.data && attempt < 4 && (body.errors ?? []).some((e) => /bad indexers|Unavailable|BadResponse|Timeout/.test(e.message))) {
+        await new Promise((r) => setTimeout(r, 5_000 * attempt));
+        continue;
+      }
       if (!body.data) throw new Error(`gateway error: ${JSON.stringify(body.errors ?? body).slice(0, 300)}`);
       const block = Number(body.data._meta?.block?.number ?? 0);
       return { data: body.data, block };

@@ -101,5 +101,5 @@ export function Windows({ value, onChange }: { value: string; onChange: (w: stri
 
 export function Provenance({ at, extra }: { at: string; extra?: string }) {
   const d = new Date(at);
-  return <footer className="mt-12 pt-4 border-t border-water-700 text-xs text-ink-faint">Chain data from six subgraphs on The Graph Network. Reference prices are the venue's own fills, by the minute; DefiLlama's hourly prices turn them into dollars and stand in for pairs with no other prints. Rolled up {relTime(d.getTime() / 1000)}. Only economic fills count.{extra ? ` ${extra}` : ""} <Link to="/status" className="text-ink-muted">Status</Link></footer>;
+  return <footer className="mt-12 pt-4 border-t border-water-700 text-xs text-ink-faint">Chain data from six subgraphs on The Graph Network. Reference prices are the venue's own fills by the minute, or the pair's deepest pool on the same chain when the tape is thin; DefiLlama's hourly prices turn them into dollars and stand in where neither exists. Rolled up {relTime(d.getTime() / 1000)}. Only economic fills count.{extra ? ` ${extra}` : ""} <Link to="/status" className="text-ink-muted">Status</Link></footer>;
 }

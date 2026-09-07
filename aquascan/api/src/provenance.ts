@@ -16,9 +16,9 @@ export function priced(value: number | string | null | undefined, confidence: nu
 // Where the reference prices behind a number came from, by the share of its fills referenced on the venue tape.
 export function refSource(tapeRatio: number | string | null | undefined): string {
   const r = tapeRatio === null || tapeRatio === undefined ? 0 : Number(tapeRatio);
-  if (r >= 0.995) return "venue tape, by the minute";
+  if (r >= 0.995) return "venue tape or same-chain pools, by the minute";
   if (r <= 0.005) return "defillama hourly";
-  return `venue tape for ${Math.round(r * 100)}% of fills, defillama hourly for the rest`;
+  return `venue tape or same-chain pools for ${Math.round(r * 100)}% of fills, defillama hourly for the rest`;
 }
 
 export const WINDOWS: Record<string, number> = { "24h": 86400, "7d": 7 * 86400, "30d": 30 * 86400, all: 0 };

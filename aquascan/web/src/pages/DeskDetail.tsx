@@ -40,7 +40,10 @@ export function FillLine({ f, children }: { f: FillRow; children?: React.ReactNo
       {(f.ref_kind === "tape" || age < 20 * 60) && <span className="text-ink-faint">5 min later <Money p={f.markout_5m_usd} signed colored pending={age < 20 * 60} /></span>}
       <span className="text-ink-faint">at fill <Money p={f.edge_usd} signed colored /></span>
       <span className="text-ink-faint">1 h later <Money p={f.markout_1h_usd} signed colored pending={age < 2 * 3600} /></span>
-      {f.ref_kind === "tape" ? <span className="text-ink-faint text-xs" title="reference: the pair's other fills around this one">{f.ref_fills} prints within {f.ref_window_min === 0 ? "the minute" : `${f.ref_window_min} min`}</span> : f.ref_kind === "hourly" ? <span className="text-ink-faint text-xs" title="no other prints of this pair nearby">hourly reference</span> : null}
+      {f.ref_kind === "tape" ? <span className="text-ink-faint text-xs" title="reference: the pair's other fills around this one">{f.ref_fills} prints within {f.ref_window_min === 0 ? "the minute" : `${f.ref_window_min} min`}</span>
+        : f.ref_kind === "pool" ? <span className="text-ink-faint text-xs" title="reference: the pair's deepest pool on this chain">{f.ref_fills} pool swaps within {f.ref_window_min === 0 ? "the minute" : `${f.ref_window_min} min`}</span>
+        : f.ref_kind === "hop" ? <span className="text-ink-faint text-xs" title="reference: the dense leg on the tape, the other leg in a pool, through a hub token">{f.ref_fills} prints via a hub pool within {f.ref_window_min === 0 ? "the minute" : `${f.ref_window_min} min`}</span>
+        : f.ref_kind === "hourly" ? <span className="text-ink-faint text-xs" title="no prints of this pair nearby, on the tape or in a pool">hourly reference</span> : null}
       {f.taker && <span className="text-ink-faint">taker <span className="mono">{shortAddr(f.taker)}</span></span>}
       <When ts={f.ts} className="text-ink-faint ml-auto" />
     </div>
@@ -84,7 +87,7 @@ export function DeskDetail() {
         <span className="chip" title={d.instructions ? d.instructions.join(" > ") : d.template}>{d.template_name ?? `template ${shortAddr(d.template, 8, 4)}`}</span>
         <span className="text-ink-muted text-[13px]"><span className="gain">{d.live}</span> live of {d.strategies_total} strategies</span>
       </div>
-      <p className="text-ink-muted text-[13px] mt-2">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against the pair's other prints within minutes; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
+      <p className="text-ink-muted text-[13px] mt-2">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
 
       <ScoreTiles s={d} volumeLabel="Volume, all time" />
       <FeePanel fees={d.fees} makerFee={d.maker_fee_usd} protocolFee={d.protocol_fee_usd} volume={d.volume_usd} />

@@ -13,6 +13,14 @@ export const MAJOR_SYMBOLS = ["WETH", "ETH", "WBTC", "CBBTC", "WSTETH", "STETH",
 // horizon the window starts at the horizon and runs forward for the given length, other makers only,
 // so a later reference never looks back at the fill. A window still open at rollup time yields NULL.
 export const REF_WINDOWS = { at: [0, 2, 15], m5: [2, 15], h1: [5, 60], d1: [30, 360] };
+// A print too far from its pair's yardstick for the hour (the hourly dollar ratio when both tokens are
+// priced, else the pair's own median print) is not a market price and does not enter the reference
+// tape; it is still scored itself. The tolerance follows the pair: half a percent between two stables,
+// two percent between majors, five otherwise. A reference needs at least two prints and must sit
+// within REF_BAND of the fill's own price.
+export const PRINT_OUTLIER_BY_RANK = { stable: 0.005, major: 0.02, other: 0.05 };
+export const REF_MIN_PRINTS = 2;
+export const REF_BAND = 1.4;
 
 export interface RollupStats { durationMs: number; fills: number; tapeFills: number; strategies: number; desks: number }
 
@@ -21,58 +29,72 @@ const scaled = (col: string) => `${col}::float8 / power(10::float8, t.decimals)`
 // (under a percent) of what it pushed on the same token. Without the instruction, a pull is a round trip.
 const isFeePull = `(sf.protocol_fee_kind IS NOT NULL AND l.pushed > 0 AND l.pulled > 0 AND l.pulled * 100 < l.pushed)`;
 
-// Cumulative tape lookup: the pair's running sums at the last minute <= `minute`.
-const cum = (alias: string, minute: string) =>
+// Cumulative print lookups: a leg's running sums at the last minute <= `minute`, on the pair tape
+// (Aqua fills, src tape) or on a pool's swaps (src pool), and on the maker's own tape.
+const cum = (alias: string, leg: 1 | 2, minute: string) =>
   `LEFT JOIN LATERAL (SELECT pc.cum_a, pc.cum_b, pc.cum_n FROM pair_cum pc
-     WHERE pc.chain = tf.chain AND pc.a = tf.a AND pc.b = tf.b AND pc.minute <= ${minute}
+     WHERE pc.chain = tf.chain AND pc.a = tf.l${leg}a AND pc.b = tf.l${leg}b AND pc.src = tf.l${leg}s AND pc.minute <= ${minute}
      ORDER BY pc.minute DESC LIMIT 1) ${alias} ON true`;
-// The same lookup on the maker's own cumulative tape.
-const cumOwn = (alias: string, minute: string) =>
+const cumOwn = (alias: string, leg: 1 | 2, minute: string) =>
   `LEFT JOIN LATERAL (SELECT pc.cum_a, pc.cum_b, pc.cum_n FROM pair_maker_cum pc
-     WHERE pc.chain = tf.chain AND pc.a = tf.a AND pc.b = tf.b AND pc.maker = tf.maker AND pc.minute <= ${minute}
+     WHERE tf.l${leg}s = 'tape' AND pc.chain = tf.chain AND pc.a = tf.l${leg}a AND pc.b = tf.l${leg}b AND pc.maker = tf.maker AND pc.minute <= ${minute}
      ORDER BY pc.minute DESC LIMIT 1) ${alias} ON true`;
-// Sums over the minutes [from, to] as a difference of two cumulative lookups, all makers, or the
-// same range with the fill's own maker taken out.
-function span(name: string, from: string, to: string, ownMaker = false) {
+// Sums over the minutes [from, to] of one leg as a difference of two cumulative lookups, all
+// makers, or with the fill's own maker taken out (a no-op on a pool leg, whose prints have no maker).
+function span(name: string, leg: 1 | 2, from: string, to: string, ownMaker = false) {
   const hi = `${name}_hi`; const lo = `${name}_lo`; const ohi = `${name}_ohi`; const olo = `${name}_olo`;
   const diff = (col: string, zero: string) => ownMaker
     ? `(coalesce(${hi}.${col}, ${zero}) - coalesce(${lo}.${col}, ${zero}) - coalesce(${ohi}.${col}, ${zero}) + coalesce(${olo}.${col}, ${zero}))`
     : `(coalesce(${hi}.${col}, ${zero}) - coalesce(${lo}.${col}, ${zero}))`;
   return {
-    joins: [cum(hi, to), cum(lo, `${from} - 60`), ...(ownMaker ? [cumOwn(ohi, to), cumOwn(olo, `${from} - 60`)] : [])].join("\n"),
+    joins: [cum(hi, leg, to), cum(lo, leg, `${from} - 60`), ...(ownMaker ? [cumOwn(ohi, leg, to), cumOwn(olo, leg, `${from} - 60`)] : [])].join("\n"),
     a: diff("cum_a", "0::numeric"), b: diff("cum_b", "0::numeric"), n: diff("cum_n", "0"),
   };
 }
-function window(name: string, center: string, w: number) { return span(name, `${center} - ${w * 60}`, `${center} + ${w * 60}`); }
-// The fill's own side of the tape around fill time: the same maker or the same taker.
-const own = (name: string, w: number) =>
+// The fill's own side of the tape around fill time: the same maker or the same taker. Tape legs only:
+// a pool leg has no prints of the maker, and subtracting tape quantities from pool sums is nonsense.
+const own = (name: string, leg: 1 | 2, w: number) =>
   `LEFT JOIN LATERAL (SELECT coalesce(sum(pm.q_a), 0::numeric) AS q_a, coalesce(sum(pm.q_b), 0::numeric) AS q_b, coalesce(sum(pm.n), 0) AS n FROM pair_mt pm
-     WHERE pm.chain = tf.chain AND pm.a = tf.a AND pm.b = tf.b AND pm.minute BETWEEN tf.minute - ${w * 60} AND tf.minute + ${w * 60}
+     WHERE tf.l${leg}s = 'tape' AND pm.chain = tf.chain AND pm.a = tf.l${leg}a AND pm.b = tf.l${leg}b AND pm.minute BETWEEN tf.minute - ${w * 60} AND tf.minute + ${w * 60}
        AND (pm.maker = tf.maker OR pm.taker = tf.taker)) ${name} ON true`;
 
-// Builds the tape-reference query: one row per two-sided fill with the reference price of the pair
-// (quote units per base unit) at fill time and at each horizon, plus the window that produced it.
+type Sums = { a: string; b: string; n: string };
+// A leg's price from its sums, inverted when the route says so; the pair's reference is the
+// product of its legs (a direct route has one leg, a hop has two).
+const legPrice = (leg: 1 | 2, s: Sums) => `(CASE WHEN tf.l${leg}i THEN ${s.a}::float8 / nullif(${s.b}::float8, 0) ELSE ${s.b}::float8 / nullif(${s.a}::float8, 0) END)`;
+const refPrice = (s1: Sums, s2: Sums) => `(${legPrice(1, s1)} * CASE WHEN tf.l2a IS NULL THEN 1 ELSE ${legPrice(2, s2)} END)`;
+const refPrints = (s1: Sums, s2: Sums) => `(CASE WHEN tf.l2a IS NULL THEN ${s1.n} ELSE least(${s1.n}, ${s2.n}) END)`;
+const usable = (s1: Sums, s2: Sums) => `${refPrints(s1, s2)} >= ${REF_MIN_PRINTS} AND ${refPrice(s1, s2)} BETWEEN tf.pfill / ${REF_BAND} AND tf.pfill * ${REF_BAND}`;
+
+// Builds the reference query: one row per two-sided fill on a routed pair with the reference
+// price (quote units per base unit) at fill time and at each horizon, plus the window that produced it.
 function tapeQuery(): string {
   const joins: string[] = [];
-  const at = REF_WINDOWS.at.map((w) => { const t = window(`t${w}`, "tf.minute", w); joins.push(t.joins, own(`o${w}`, w)); return { w, t, o: `o${w}` }; });
-  // a reference is usable when other prints exist and their price sits within a factor of two of the fill's own
-  const ratio = (x: typeof at[number]) => `((${x.t.b} - ${x.o}.q_b)::float8 / nullif((${x.t.a} - ${x.o}.q_a)::float8, 0))`;
-  const usable = (x: typeof at[number]) => `(${x.t.n} - ${x.o}.n) > 0 AND ${ratio(x)} BETWEEN tf.pfill / 2 AND tf.pfill * 2`;
-  const pick = (f: (x: typeof at[number]) => string) => `CASE ${at.map((x) => `WHEN ${usable(x)} THEN ${f(x)}`).join(" ")} END`;
-  const p0 = pick(ratio);
+  const at = REF_WINDOWS.at.map((w) => {
+    const t1 = span(`t${w}l1`, 1, `tf.minute - ${w * 60}`, `tf.minute + ${w * 60}`); const t2 = span(`t${w}l2`, 2, `tf.minute - ${w * 60}`, `tf.minute + ${w * 60}`);
+    joins.push(t1.joins, t2.joins, own(`o${w}l1`, 1, w), own(`o${w}l2`, 2, w));
+    const s1: Sums = { a: `(${t1.a} - o${w}l1.q_a)`, b: `(${t1.b} - o${w}l1.q_b)`, n: `(${t1.n} - o${w}l1.n)` };
+    const s2: Sums = { a: `(${t2.a} - o${w}l2.q_a)`, b: `(${t2.b} - o${w}l2.q_b)`, n: `(${t2.n} - o${w}l2.n)` };
+    return { w, s1, s2 };
+  });
+  const pick = (f: (x: typeof at[number]) => string) => `CASE ${at.map((x) => `WHEN ${usable(x.s1, x.s2)} THEN ${f(x)}`).join(" ")} END`;
+  const p0 = pick((x) => refPrice(x.s1, x.s2));
   const w0 = pick((x) => `${x.w}`);
-  const n0 = pick((x) => `(${x.t.n} - ${x.o}.n)::int`);
+  const n0 = pick((x) => `${refPrints(x.s1, x.s2)}::int`);
   const horizon = (name: string, offset: number, lengths: number[]) => {
-    const ws = lengths.map((w) => { const t = span(`${name}${w}`, `tf.minute + ${offset}`, `tf.minute + ${offset} + ${w * 60}`, true); joins.push(t.joins); return { w, t }; });
+    const ws = lengths.map((w) => {
+      const s1 = span(`${name}${w}l1`, 1, `tf.minute + ${offset}`, `tf.minute + ${offset} + ${w * 60}`, true);
+      const s2 = span(`${name}${w}l2`, 2, `tf.minute + ${offset}`, `tf.minute + ${offset} + ${w * 60}`, true);
+      joins.push(s1.joins, s2.joins); return { w, s1, s2 };
+    });
     // a window still open at rollup time is not a reference yet
-    const ratio = (x: typeof ws[number]) => `(${x.t.b}::float8 / nullif(${x.t.a}::float8, 0))`;
-    return `CASE ${ws.map((x) => `WHEN tf.minute + ${offset} + ${x.w * 60} <= $1 AND ${x.t.n} > 0 AND ${ratio(x)} BETWEEN tf.pfill / 2 AND tf.pfill * 2 THEN ${ratio(x)}`).join(" ")} END`;
+    return `CASE ${ws.map((x) => `WHEN tf.minute + ${offset} + ${x.w * 60} <= $1 AND ${usable(x.s1, x.s2)} THEN ${refPrice(x.s1, x.s2)}`).join(" ")} END`;
   };
   const p5 = horizon("m", 300, REF_WINDOWS.m5);
   const p60 = horizon("h", 3600, REF_WINDOWS.h1);
   const p1440 = horizon("d", 86400, REF_WINDOWS.d1);
   return `CREATE TEMP TABLE tv ON COMMIT DROP AS
-    SELECT tf.chain, tf.fill_id, tf.net_a::float8 AS net_a, tf.net_b::float8 AS net_b, tf.usd_b,
+    SELECT tf.chain, tf.fill_id, tf.kind, tf.net_a::float8 AS net_a, tf.net_b::float8 AS net_b, tf.usd_b,
            ${p0} AS p0, ${w0} AS w0, ${n0} AS n0, ${p5} AS p5, ${p60} AS p60, ${p1440} AS p1440
     FROM tf
     ${joins.join("\n")}`;
@@ -121,7 +143,10 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
     await client.query(`
       CREATE TEMP TABLE tf ON COMMIT DROP AS
       SELECT x.*, (-x.net_b / x.net_a)::float8 AS pfill,
-             (x.usd_b IS NOT NULL AND abs(x.net_b)::float8 * x.usd_b < 0.5) AS dust
+             (x.usd_b IS NOT NULL AND abs(x.net_b)::float8 * x.usd_b < 0.5) AS dust,
+             coalesce(pr.kind, 'tape') AS kind,
+             coalesce(pr.leg1_a, x.a) AS l1a, coalesce(pr.leg1_b, x.b) AS l1b, coalesce(pr.leg1_src, 'tape') AS l1s, coalesce(pr.leg1_inv, false) AS l1i,
+             pr.leg2_a AS l2a, pr.leg2_b AS l2b, coalesce(pr.leg2_src, 'tape') AS l2s, coalesce(pr.leg2_inv, false) AS l2i
       FROM (
       SELECT f.chain, f.id AS fill_id, s.maker, f.taker, (f.ts / 60) * 60 AS minute,
              la.token AS a, lb.token AS b,
@@ -137,19 +162,58 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
       LEFT JOIN prices pb ON pb.chain = f.chain AND pb.token = lb.token AND pb.hour = (f.ts / 3600) * 3600
       WHERE f.economic AND f.shape = 'TWO_SIDED' AND la.net <> 0 AND lb.net <> 0 AND sign(la.net) = -sign(lb.net)
         AND (ta.qrank > tb.qrank OR (ta.qrank = tb.qrank AND la.token < lb.token))
-      ) x`);
+      ) x
+      LEFT JOIN pair_routes pr ON pr.chain = x.chain AND pr.a = x.a AND pr.b = x.b`);
+    // the yardstick per pair and hour: the hourly dollar ratio when both tokens are priced, else the
+    // pair's own median print; the tolerance follows the pair's rank
+    const yardstick = (name: string, source: string, priceExpr: string) => `
+      CREATE TEMP TABLE ${name} ON COMMIT DROP AS
+      SELECT x.chain, x.a, x.b, x.hour,
+             coalesce(pa.usd / nullif(pb.usd, 0), x.med) AS yard,
+             CASE WHEN ta.qrank = 0 AND tb.qrank = 0 THEN ${PRINT_OUTLIER_BY_RANK.stable} WHEN ta.qrank <= 1 AND tb.qrank <= 1 THEN ${PRINT_OUTLIER_BY_RANK.major} ELSE ${PRINT_OUTLIER_BY_RANK.other} END AS tol
+      FROM (SELECT chain, a, b, (ts / 3600) * 3600 AS hour, percentile_cont(0.5) WITHIN GROUP (ORDER BY ${priceExpr}) AS med FROM ${source} GROUP BY chain, a, b, (ts / 3600) * 3600) x
+      JOIN tk ta ON ta.chain = x.chain AND ta.address = x.a
+      JOIN tk tb ON tb.chain = x.chain AND tb.address = x.b
+      LEFT JOIN prices pa ON pa.chain = x.chain AND pa.token = x.a AND pa.hour = x.hour
+      LEFT JOIN prices pb ON pb.chain = x.chain AND pb.token = x.b AND pb.hour = x.hour`;
+    await client.query(yardstick("pair_yard", "(SELECT chain, a, b, minute AS ts, pfill FROM tf WHERE NOT dust) t", "pfill"));
     await client.query(`
       CREATE TEMP TABLE pair_mt ON COMMIT DROP AS
-      SELECT chain, a, b, minute, maker, taker, sum(abs(net_a)) AS q_a, sum(abs(net_b)) AS q_b, count(*) AS n
-      FROM tf WHERE NOT dust GROUP BY chain, a, b, minute, maker, taker`);
+      SELECT tf.chain, tf.a, tf.b, tf.minute, tf.maker, tf.taker, sum(abs(tf.net_a)) AS q_a, sum(abs(tf.net_b)) AS q_b, count(*) AS n
+      FROM tf JOIN pair_yard y ON y.chain = tf.chain AND y.a = tf.a AND y.b = tf.b AND y.hour = (tf.minute / 3600) * 3600
+      WHERE NOT tf.dust AND abs(tf.pfill / nullif(y.yard, 0) - 1) <= y.tol
+      GROUP BY tf.chain, tf.a, tf.b, tf.minute, tf.maker, tf.taker`);
     await client.query(`CREATE INDEX ON pair_mt (chain, a, b, minute)`);
+    // pool prints: every swap of a routed pool, oriented like the tape (amounts come in token units)
+    await client.query(`
+      CREATE TEMP TABLE pool_swap_px ON COMMIT DROP AS
+      SELECT p.chain,
+             CASE WHEN t0.qrank > t1.qrank OR (t0.qrank = t1.qrank AND p.token0 < p.token1) THEN p.token0 ELSE p.token1 END AS a,
+             CASE WHEN t0.qrank > t1.qrank OR (t0.qrank = t1.qrank AND p.token0 < p.token1) THEN p.token1 ELSE p.token0 END AS b,
+             s.ts,
+             CASE WHEN t0.qrank > t1.qrank OR (t0.qrank = t1.qrank AND p.token0 < p.token1) THEN abs(s.amount0) ELSE abs(s.amount1) END AS q_a,
+             CASE WHEN t0.qrank > t1.qrank OR (t0.qrank = t1.qrank AND p.token0 < p.token1) THEN abs(s.amount1) ELSE abs(s.amount0) END AS q_b
+      FROM pool_swaps s
+      JOIN pools p ON p.chain = s.chain AND p.id = s.pool
+      JOIN tk t0 ON t0.chain = p.chain AND t0.address = p.token0
+      JOIN tk t1 ON t1.chain = p.chain AND t1.address = p.token1
+      WHERE s.amount0 <> 0 AND s.amount1 <> 0`);
+    await client.query(yardstick("pool_yard", "pool_swap_px", "(q_b / q_a)::float8"));
+    await client.query(`
+      CREATE TEMP TABLE pool_prints ON COMMIT DROP AS
+      SELECT x.chain, x.a, x.b, (x.ts / 60) * 60 AS minute, sum(x.q_a) AS q_a, sum(x.q_b) AS q_b, count(*) AS n
+      FROM pool_swap_px x JOIN pool_yard y ON y.chain = x.chain AND y.a = x.a AND y.b = x.b AND y.hour = (x.ts / 3600) * 3600
+      WHERE abs((x.q_b / x.q_a)::float8 / nullif(y.yard, 0) - 1) <= y.tol
+      GROUP BY x.chain, x.a, x.b, (x.ts / 60) * 60`);
     await client.query(`
       CREATE TEMP TABLE pair_cum ON COMMIT DROP AS
-      SELECT chain, a, b, minute,
+      SELECT chain, a, b, src, minute,
              sum(q_a) OVER w AS cum_a, sum(q_b) OVER w AS cum_b, sum(n) OVER w AS cum_n
-      FROM (SELECT chain, a, b, minute, sum(q_a) AS q_a, sum(q_b) AS q_b, sum(n) AS n FROM pair_mt GROUP BY 1, 2, 3, 4) m
-      WINDOW w AS (PARTITION BY chain, a, b ORDER BY minute ROWS UNBOUNDED PRECEDING)`);
-    await client.query(`CREATE INDEX ON pair_cum (chain, a, b, minute)`);
+      FROM (SELECT chain, a, b, 'tape' AS src, minute, sum(q_a) AS q_a, sum(q_b) AS q_b, sum(n) AS n FROM pair_mt GROUP BY 1, 2, 3, 4, 5
+            UNION ALL
+            SELECT chain, a, b, 'pool' AS src, minute, q_a, q_b, n FROM pool_prints) m
+      WINDOW w AS (PARTITION BY chain, a, b, src ORDER BY minute ROWS UNBOUNDED PRECEDING)`);
+    await client.query(`CREATE INDEX ON pair_cum (chain, a, b, src, minute)`);
     await client.query(`
       CREATE TEMP TABLE pair_maker_cum ON COMMIT DROP AS
       SELECT chain, a, b, maker, minute,
@@ -157,7 +221,7 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
       FROM (SELECT chain, a, b, maker, minute, sum(q_a) AS q_a, sum(q_b) AS q_b, sum(n) AS n FROM pair_mt GROUP BY 1, 2, 3, 4, 5) m
       WINDOW w AS (PARTITION BY chain, a, b, maker ORDER BY minute ROWS UNBOUNDED PRECEDING)`);
     await client.query(`CREATE INDEX ON pair_maker_cum (chain, a, b, maker, minute)`);
-    await client.query(`ANALYZE pair_mt; ANALYZE pair_cum; ANALYZE pair_maker_cum; ANALYZE tf`);
+    await client.query(`ANALYZE pair_mt; ANALYZE pool_prints; ANALYZE pair_cum; ANALYZE pair_maker_cum; ANALYZE tf`);
 
     // 1c. tape references per fill
     await client.query(tapeQuery(), [nowMinute]);
@@ -178,12 +242,12 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
                CASE WHEN tape THEN (tv.net_a * tv.p5 + tv.net_b) * tv.usd_b END AS markout_5m_usd,
                CASE WHEN tape THEN (tv.net_a * tv.p60 + tv.net_b) * tv.usd_b WHEN hourly AND hv.legs = hv.priced_1h THEN hv.markout_1h_usd END AS markout_1h_usd,
                CASE WHEN tape THEN (tv.net_a * tv.p1440 + tv.net_b) * tv.usd_b WHEN hourly AND hv.legs = hv.priced_24h THEN hv.markout_24h_usd END AS markout_24h_usd,
-               CASE WHEN tape THEN 'tape' WHEN hourly THEN 'hourly' END AS ref_kind,
+               CASE WHEN tape THEN tv.kind WHEN hourly THEN 'hourly' END AS ref_kind,
                CASE WHEN tape THEN tv.w0 END AS ref_window_min, CASE WHEN tape THEN tv.n0 END AS ref_fills,
                CASE WHEN hv.fee_priced THEN hv.protocol_fee_usd END AS protocol_fee_usd
         FROM hv
         LEFT JOIN tv ON tv.chain = hv.chain AND tv.fill_id = hv.fill_id,
-        LATERAL (SELECT (tv.p0 IS NOT NULL AND tv.usd_b IS NOT NULL) AS tape, (hv.legs = hv.priced_legs) AS hourly) k
+        LATERAL (SELECT (tv.p0 IS NOT NULL AND tv.usd_b IS NOT NULL AND tv.kind <> 'hourly') AS tape, (hv.legs = hv.priced_legs) AS hourly) k
       ) x
       LEFT JOIN strategy_fees sf ON sf.chain = x.chain AND sf.strategy_id = x.strategy_id
       ON CONFLICT (chain, fill_id) DO UPDATE SET
@@ -292,7 +356,7 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
              CASE WHEN p.oldest_mark_ts IS NOT NULL THEN extract(epoch FROM now())::bigint - p.oldest_mark_ts END,
              p.pnl_usd_marked, coalesce(tk.takers, 0), tk.top_taker_share, coalesce(tk.self_fills, 0),
              sum(fv.markout_5m_usd), sum(fv.drift_1h_usd), sum(fv.drift_24h_usd), sum(fv.protocol_fee_usd), sum(fv.maker_fee_usd),
-             count(*) FILTER (WHERE fv.ref_kind = 'tape'),
+             count(*) FILTER (WHERE fv.ref_kind IN ('tape', 'pool', 'hop')),
              pr.m5, pr.m5_se, pr.m1h, pr.m1h_se
       FROM strategies s
       JOIN fill_values fv ON fv.chain = s.chain AND fv.strategy_id = s.id
@@ -345,7 +409,7 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
     const durationMs = Date.now() - started;
     await client.query(`INSERT INTO rollups (name, ran_at, duration_ms) VALUES ('derived', now(), $1)
       ON CONFLICT (name) DO UPDATE SET ran_at = EXCLUDED.ran_at, duration_ms = EXCLUDED.duration_ms`, [durationMs]);
-    const { rows: [c] } = await client.query(`SELECT (SELECT count(*) FROM fill_values) AS fills, (SELECT count(*) FROM fill_values WHERE ref_kind = 'tape') AS tape,
+    const { rows: [c] } = await client.query(`SELECT (SELECT count(*) FROM fill_values) AS fills, (SELECT count(*) FROM fill_values WHERE ref_kind IN ('tape', 'pool', 'hop')) AS tape,
       (SELECT count(*) FROM strategy_stats) AS strategies, (SELECT count(*) FROM desk_stats) AS desks`);
     await client.query("COMMIT");
     return { durationMs, fills: Number(c.fills), tapeFills: Number(c.tape), strategies: Number(c.strategies), desks: Number(c.desks) };

@@ -5,6 +5,13 @@ export interface ChainConfig {
   subgraphId: string;
 }
 
+export interface DexConfig {
+  chain: ChainName;
+  protocol: string;
+  subgraphId: string;
+  hubs: Record<string, string>;   // symbol -> address of the tokens a hop may pass through
+}
+
 export interface Config {
   apiKey: string;
   chains: ChainConfig[];
@@ -15,7 +22,18 @@ export interface Config {
   rpcByChain: Record<string, string | undefined>;
   pollSeconds: number;
   pageSize: number;
+  dexes: DexConfig[];
+  dexCallsPerMinute: number;
 }
+
+// Published DEX subgraphs with the Uniswap v3 schema (pools, swaps, poolDayData), one per chain,
+// overridable with DEX_SUBGRAPH_ID_<CHAIN>. Chains without one keep hourly references.
+const DEX_DEFAULTS: Partial<Record<ChainName, { protocol: string; subgraphId: string; hubs: Record<string, string> }>> = {
+  ethereum: { protocol: "uniswap-v3", subgraphId: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
+    hubs: { WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7" } },
+  bsc: { protocol: "uniswap-v3", subgraphId: "G5MUbSBM7Nsrm9tH2tGQUiAF4SZDGf2qeo1xPLYjKr7K",
+    hubs: { WBNB: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", USDT: "0x55d398326f99059ff775485246999027b3197955", USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" } },
+};
 
 const ENV_SUFFIX: Record<ChainName, string> = {
   ethereum: "ETHEREUM",
@@ -49,5 +67,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, only?: ChainNam
     rpcByChain: Object.fromEntries(CHAIN_NAMES.map((name) => [name, env[`RPC_${ENV_SUFFIX[name]}`]])),
     pollSeconds: Number(env.ENRICH_POLL_SECONDS ?? 300),
     pageSize: 1000,
+    dexes: chains.flatMap((c) => {
+      const d = DEX_DEFAULTS[c.name];
+      const id = env[`DEX_SUBGRAPH_ID_${ENV_SUFFIX[c.name]}`] ?? d?.subgraphId;
+      return id && d ? [{ chain: c.name, protocol: d.protocol, subgraphId: id, hubs: d.hubs }] : [];
+    }),
+    dexCallsPerMinute: Number(env.DEX_CALLS_PER_MINUTE ?? 120),
   };
 }
