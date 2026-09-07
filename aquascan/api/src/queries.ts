@@ -11,7 +11,7 @@ function chainParam(chain: string | null): string | null {
   return chain && CHAINS.includes(chain) ? chain : null;
 }
 
-async function rollupAt(pool: Pool): Promise<Date> {
+export async function rollupAt(pool: Pool): Promise<Date> {
   const { rows } = await pool.query(`SELECT ran_at FROM rollups WHERE name = 'derived'`);
   return rows[0]?.ran_at ?? new Date(0);
 }
@@ -34,10 +34,10 @@ const ratioBps = (col: string, alias: string, vol = "volume_usd") => `
     + power(sum(${col}) / nullif(sum(${vol}) FILTER (WHERE ${col} IS NOT NULL), 0), 2) * sum(${vol} * ${vol}) FILTER (WHERE ${col} IS NOT NULL)))
     / nullif(sum(${vol}) FILTER (WHERE ${col} IS NOT NULL), 0) * 1e4 AS ${alias}_se`;
 // A rate with its band, in basis points of volume: {bps, se} or null when there is nothing to measure.
-const band = (bps: unknown, se: unknown) => (bps === null || bps === undefined ? null : { bps: Number(bps), se: se === null || se === undefined ? null : Number(se) });
+export const band = (bps: unknown, se: unknown) => (bps === null || bps === undefined ? null : { bps: Number(bps), se: se === null || se === undefined ? null : Number(se) });
 
 // The scored numbers of one row (desk, strategy, hero), each with its own provenance.
-function scored(r: Record<string, unknown>, pr: number, tape: number, at: Date) {
+export function scored(r: Record<string, unknown>, pr: number, tape: number, at: Date) {
   const ref = refSource(tape);
   return {
     volume_usd: priced(r.volume_usd as number, pr, at, HOURLY),

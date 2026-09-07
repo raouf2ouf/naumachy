@@ -42,6 +42,21 @@ export interface StrategyDetail {
 export interface Health { rollup_at: string; chains: { chain: Chain; cursor: number; subgraph_head: number | null; blocks_behind: number | null; updated_at: string; economic_fills: number; priced_ratio: number; tape_ratio: number }[] }
 export interface SearchResult { makers: { chain: Chain; maker: string }[]; strategies: { chain: Chain; id: string; strategy_hash: string; desk: string; status: string }[]; desks: { chain: Chain; desk: string; maker: string; fills: number }[] }
 
+// The arena: generations of gladiators as the registry attests them, joined with Aquascan's numbers.
+export interface Knobs { feeBaseBps: number; feeSlopeBps: number; feeMaxBps: number; windowSeconds: number; depth: number; capBps: number; parent?: string | null }
+export interface ArenaLive extends Scored { fills: number; maker_fee_bps: number | null }
+export interface ArenaEntry {
+  gladiator: string; name: string | null; generation_born: number; parent: { address: string; name: string | null } | null;
+  strategy_hash: string; strategy_id: string | null; desk: string | null; status: string | null; archetype: string | null; entered_at: number;
+  attested: { score_quote: string; se_quote: string; fills: number; quote_token: string; score_usd: number; se_usd: number; attested_at: number } | null;
+  champion: boolean; knobs: Knobs | null; mind: string | null; parent_choice: string | null; live: ArenaLive | null;
+}
+export interface ArenaGeneration { number: number; tape: string; opened_at: number; closed_at: number | null; champion: { address: string; name: string | null; strategy_hash: string | null; score_usd: number | null } | null; entries: ArenaEntry[] }
+export interface Arena { chain: Chain; configured: boolean; rollup_at?: string; generations: ArenaGeneration[]; gladiators: { address: string; name: string | null; generation_born: number; parent: { address: string; name: string | null } | null; registered_at: number; entries: number; wins: number }[]; promotions: { gladiator: string; name: string | null; strategy_hash: string; chain_id: number; bankroll: string; at: number; tx: string }[] }
+export interface ToolRead { tool: string; input: Record<string, unknown>; chars: number; ms: number }
+export interface GenerationEntry extends ArenaEntry { parent_line: { address: string; generation: number; knobs: Knobs } | null; rationale: string | null; transcript: ToolRead[]; draft: { usdcFor1Weth: string; wethFor1000Usdc: string } | null; program: string | null }
+export interface GenerationDetail extends Omit<ArenaGeneration, "entries"> { chain: Chain; rollup_at: string; entries: GenerationEntry[] }
+
 const BASE = import.meta.env.VITE_API_URL ?? "";
 
 export async function get<T>(path: string): Promise<T> {
@@ -60,4 +75,6 @@ export const api = {
   desk: (chain: string, id: string, limit = 50) => get<DeskDetailFull>(`/api/desk/${chain}/${encodeURIComponent(id)}?limit=${limit}`),
   strategy: (chain: string, id: string, limit = 50) => get<StrategyDetail>(`/api/strategy/${chain}/${encodeURIComponent(id)}?limit=${limit}`),
   search: (q: string) => get<SearchResult>(`/api/search?q=${encodeURIComponent(q)}`),
+  arena: () => get<Arena>("/api/arena"),
+  generation: (n: number) => get<GenerationDetail>(`/api/arena/generation/${n}`),
 };

@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import pg from "pg";
 import { health, overview, series, desks, desk, strategy, search } from "./queries.js";
+import { arena, generation } from "./arena.js";
 
 const pool = new pg.Pool({ connectionString: process.env.AQUASCAN_DATABASE_URL ?? "postgres://aquascan:aquascan@localhost:5433/aquascan", max: 8 });
 const port = Number(process.env.AQUASCAN_API_PORT ?? 3100);
@@ -15,6 +16,8 @@ const routes: [RegExp, Handler][] = [
   [/^\/api\/desk\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => desk(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/strategy\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => strategy(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/search$/, (u) => search(pool, u.searchParams.get("q") ?? "")],
+  [/^\/api\/arena$/, () => arena(pool)],
+  [/^\/api\/arena\/generation\/(\d+)$/, (_u, [n]) => generation(pool, Number(n))],
 ];
 
 function send(res: ServerResponse, status: number, body: unknown) {

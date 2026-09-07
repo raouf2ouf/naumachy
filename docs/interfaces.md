@@ -105,7 +105,8 @@ Read-only JSON. All amounts as strings, all addresses lowercase, every priced nu
 - `GET /api/leaderboard?window&chain&minVolume&sort&arena=wild|gym|live`
 - `GET /api/wallet/:address`
 - `GET /api/search?q=` makers, strategies, templates, gladiators.
-- `GET /api/arena/generations`, `GET /api/arena/gladiator/:address`
+- `GET /api/arena` the arena as the registry's subgraph tells it, joined with Aquascan: generations newest first, each with its tape label, open and close times, champion, and entries; every entry carries the gladiator (address, name, parent, generation born), the strategy hash and Aquascan id, the archetype, the attested score (`score_quote`, `se_quote`, `fills`, `quote_token`, and `score_usd` from the quote token's decimals), the knobs it shipped (from the generation file; the rationale stays out), the kind of mind that wrote it, and the live Aquascan numbers for the strategy (fills, volume, edge, 5-minute markout with its band, maker fee); plus `gladiators` (with wins) and `promotions`. `ARENA_SUBGRAPH` is a graph-node URL (gym) or a network subgraph id (gateway); `GENERATIONS_DIR` holds the files; `ARENA_CHAIN` defaults to base.
+- `GET /api/arena/generation/:number` one generation in full: the entries above plus, for each, the knobs of its parent line (the parent's program in the previous generation, or its own), the rationale and the reads transcript once the generation is closed, the draft prices from the private fork, and the program bytes.
 - `GET /api/health` freshness per lane (subgraph head block, enrichment cursor, price coverage, share of fills referenced on the tape).
 - Every scored number is `{value, source, at, confidence}`; scored rows carry edge, markout at 5 min, 1 h and 1 d, drift, maker and protocol fees, and the share of fills whose reference is the venue tape. Strategies and desks expose their decoded fee instructions.
 
@@ -127,7 +128,7 @@ The gladiators use the Subgraph MCP against the subgraphs for raw questions and 
 One process per gladiator per generation (`agents/src/gladiator.ts`), driven by the evolution loop (`agents/src/evolve.ts`) or standalone.
 
 - Reads: the arena subgraph (generations, entries, attested scores, champion), the gym Aquascan API (`/api/strategy/base/<maker><router><strategyHash>`: live 5-minute markout, band, fills, decoded fee), the pools subgraph (the pool's last prints: price, prints per minute, realized volatility), and the generation files of every entry (knobs; its own rationale only).
-- Decides: knobs of the anchored archetype through the Claude API (`claude-opus-5`, adaptive thinking, structured output against `KnobsSchema`), or the heuristic control when `GLADIATOR_MIND=heuristic`.
+- Decides: knobs of the anchored archetype through the Claude API (adaptive thinking, structured output against `KnobsSchema`), by default with tools: `get_schema(subgraph)`, `query_subgraph(subgraph, query)` (gym) or The Graph's Subgraph MCP (`execute_query_by_subgraph_id`, network), and `aquascan(path)`; the reads are recorded as `transcript` in the generation file. `GLADIATOR_TOOLS=off` is the briefing alone; `GLADIATOR_MIND=heuristic` the control.
 - Validates: on a private anvil forked from the gym, ships the draft and quotes both ways at a twentieth of the ledger.
 - Writes: docks its previous programs, `Aqua.ship` from its own wallet, `ArenaRegistry.register` (first time) and `enter`; then `infra/data/gym/generations/<generation>-<address>.json`:
 

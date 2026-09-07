@@ -8,6 +8,8 @@ import { DeskDetail } from "./pages/DeskDetail";
 import { StrategyDetail } from "./pages/StrategyDetail";
 import { Search } from "./pages/Search";
 import { Status } from "./pages/Status";
+import { Arena } from "./pages/Arena";
+import { Generation } from "./pages/Generation";
 
 const client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1 } } });
 
@@ -23,6 +25,8 @@ export function App() {
             <Route path="desk/:chain/:id" element={<DeskDetail />} />
             <Route path="strategy/:chain/:id" element={<StrategyDetail />} />
             <Route path="search" element={<Search />} />
+            <Route path="arena" element={<Arena />} />
+            <Route path="arena/:number" element={<Generation />} />
             <Route path="status" element={<Status />} />
             <Route path="*" element={<p className="text-ink-muted">No such page. Use the search or start from the overview.</p>} />
           </Route>
