@@ -18,3 +18,12 @@ describe("windowSeconds", () => {
     expect(windowSeconds("all").seconds).toBe(0);
   });
 });
+
+describe("refSource", () => {
+  it("names the tape, the hourly fallback, or the mix", async () => {
+    const { refSource } = await import("../src/provenance.js");
+    expect(refSource(1)).toBe("venue tape, by the minute");
+    expect(refSource(0)).toBe("defillama hourly");
+    expect(refSource(0.85)).toBe("venue tape for 85% of fills, defillama hourly for the rest");
+  });
+});
