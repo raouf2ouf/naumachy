@@ -15,6 +15,7 @@ export interface Config {
   engineKey: Hex;                      // an unlocked anvil key: it drives the taker and replays the tape
   tapeMinutes: number; tapeScale: number; tickMs: number;
   probeUsd: number; noiseUsd: number; noiseProbability: number; edgeBps: number;
+  toleranceBps: number; poolFeeBps: number;   // uninformed takers: mean tolerance to a worse-than-pool price (exponential, bps); the pool fee a routed taker pays
   poolNoiseProbability: number; poolNoiseUsd: number;   // random swaps through the pool itself when the tape is silent
   informedMinUsd: number;                               // a tape swap at least this large is front-run against the gladiators
 }
@@ -32,6 +33,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tapeMinutes: Number(env.TAPE_MINUTES ?? 60), tapeScale: Number(env.TAPE_SCALE ?? 1), tickMs: Number(env.TICK_MS ?? 2000),
     probeUsd: Number(env.PROBE_USD ?? 200), noiseUsd: Number(env.NOISE_USD ?? 100), noiseProbability: Number(env.NOISE_PROBABILITY ?? 0.15),
     edgeBps: Number(env.EDGE_BPS ?? 5),
+    toleranceBps: Number(env.TOLERANCE_BPS ?? 10), poolFeeBps: Number(env.POOL_FEE_BPS ?? 5),
     poolNoiseProbability: Number(env.POOL_NOISE_PROBABILITY ?? 0.2), poolNoiseUsd: Number(env.POOL_NOISE_USD ?? 3000),
     informedMinUsd: Number(env.INFORMED_MIN_USD ?? 20_000),
   };

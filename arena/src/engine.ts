@@ -10,9 +10,12 @@ const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
 
 // The taker engine: the arena's flow. Every tick it replays the next swaps of the tape through the
 // gym's pool, then looks at every live gladiator: an informed take when a quote beats the pool by
-// more than the edge threshold (the arbitrage that bleeds mainnet desks), an uninformed take at
-// random with a small size (the spread income a maker lives on). Fills go through the Taker
-// contract, so Aqua's ledger, the subgraph and Aquascan see them like any other fill.
+// more than the edge threshold (the arbitrage that bleeds mainnet desks), and, at random, one
+// uninformed order that shops: it quotes every gladiator at its size and goes to the best one if
+// that beats the pool, or if it is within the taker's own tolerance of the pool's mid (a lazy
+// taker who does not route); otherwise it trades the pool. Gladiators compete on price for every
+// order, the way 1inch's resolvers route on mainnet. Fills go through the Taker contract, so
+// Aqua's ledger, the subgraph and Aquascan see them like any other fill.
 async function main() {
   const cfg = loadConfig();
   const account = privateKeyToAccount(cfg.engineKey);
@@ -83,14 +86,36 @@ async function main() {
       let took: string | null = null;
       if (buyWeth !== null && buyWeth > fairWeth * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, cfg.usdc, cfg.weth, probeUsdc, takerData.in, "arb: buys WETH below the pool");
       else if (sellWeth !== null && sellWeth > fairUsdc * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, cfg.weth, cfg.usdc, probeWeth, takerData.in, "arb: sells WETH above the pool");
-      else if (Math.random() < cfg.noiseProbability) {
-        const usd = Math.max(1, Math.round(Math.random() * cfg.noiseUsd));
-        const amt = BigInt(usd * 1e6);
-        took = Math.random() < 0.5
-          ? await take(wallet, cfg, g, cfg.usdc, cfg.weth, amt, takerData.in, "noise: buys WETH")
-          : await take(wallet, cfg, g, cfg.weth, cfg.usdc, amt * 10n ** 30n / price, takerData.in, "noise: sells WETH");
+      if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | pool ${formatUnits(price, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+    }
+    // the uninformed order: a direction, a size, a tolerance drawn from an exponential with mean
+    // TOLERANCE_BPS (most takers route and accept only a quote that beats the pool; a few do not
+    // look). Every gladiator is quoted at the order's size; the best quote wins the order if it
+    // beats the pool after the pool's fee, or if it is within the tolerance; otherwise the pool gets it.
+    if (gladiators.length > 0 && Math.random() < cfg.noiseProbability) {
+      const buyWeth = Math.random() < 0.5; const usd = Math.max(1, Math.round(Math.random() * cfg.noiseUsd));
+      const tolBps = -Math.log(1 - Math.random()) * cfg.toleranceBps;
+      const amt = buyWeth ? BigInt(usd * 1e6) : BigInt(usd * 1e6) * 10n ** 30n / price;
+      const fairOut = buyWeth ? amt * 10n ** 30n / price : amt * price / 10n ** 30n;
+      const poolOut = fairOut * BigInt(1_000_000 - cfg.poolFeeBps * 100) / 1_000_000n;
+      const floorOut = fairOut * BigInt(Math.max(0, Math.round(1_000_000 - tolBps * 100))) / 1_000_000n;
+      let best: { g: Gladiator; out: bigint } | null = null;
+      for (const g of gladiators) {
+        const out = await quote(pub, cfg, g, buyWeth ? cfg.usdc : cfg.weth, buyWeth ? cfg.weth : cfg.usdc, amt, takerData.in);
+        if (out !== null && (best === null || out > best.out)) best = { g, out };
       }
-      if (took) { fills += 1; if (took.startsWith("arb")) arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | pool ${formatUnits(price, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+      const label = buyWeth ? "buys WETH" : "sells WETH";
+      if (best && (best.out >= poolOut || best.out >= floorOut)) {
+        const why = best.out >= poolOut ? "flow: best quote beat the pool" : `flow: within ${tolBps.toFixed(1)} bps`;
+        const took = await take(wallet, cfg, best.g, buyWeth ? cfg.usdc : cfg.weth, buyWeth ? cfg.weth : cfg.usdc, amt, takerData.in, `${why}, ${label}`);
+        if (took) { fills += 1; log(`${best.g.maker.slice(0, 10)} ${took} | pool ${formatUnits(price, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+      } else {
+        try {
+          await wallet.writeContract({ address: cfg.swapRouter02, abi: swapRouter02Abi, functionName: "exactInputSingle",
+            args: [{ tokenIn: buyWeth ? cfg.usdc : cfg.weth, tokenOut: buyWeth ? cfg.weth : cfg.usdc, fee: 500, recipient: account.address, amountIn: amt, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
+          log(`pool       flow: ${label} $${usd} at the pool, best gladiator ${best ? ((Number(best.out) / Number(fairOut) - 1) * 1e4).toFixed(1) + " bps from mid" : "none"}, tolerance ${tolBps.toFixed(1)} bps`);
+        } catch (err) { log(`pool order failed: ${String(err).slice(0, 120)}`); }
+      }
     }
     await new Promise((r) => setTimeout(r, cfg.tickMs));
   }
