@@ -80,9 +80,9 @@ Repo, `CLAUDE.md`, plan, lessons, interfaces, decisions, commit queue.
 
 ### M4 - Evolution
 
-- Generation loop: losers read winners' fills through the Subgraph MCP, mutate, re-ship. Lineage recorded in ArenaRegistry.
-- Hold-out tape: train on tape A, score on unseen tape B.
-- Explainability: debug router traces per fill, decoded bytecode diffs between generations.
+- Generation loop: losers read winners' fills through the Subgraph MCP, mutate, re-ship. Lineage recorded in ArenaRegistry. (2026-09-07: loop built in `agents/`, reads the gym subgraphs and Aquascan directly, not the MCP yet; lineage on chain at registration only, per entry in the generation files; control line beside the minds; the minds wait for an API key.)
+- Hold-out tape: train on tape A, score on unseen tape B. (Label alternates per generation; segment replay waits for the tape.)
+- Explainability: debug router traces per fill, decoded bytecode diffs between generations. (Generation files carry knobs, program, rationale, context; the diff of two files is the decoded diff. Router traces open.)
 - Gates moved: GB.1, GB.2 in full.
 
 ### M5 - Steel

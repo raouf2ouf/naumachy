@@ -24,3 +24,14 @@ Every tick (one block) it replays the next swaps of the tape through the fork's 
 - **uninformed flow**: at random, a small take at the quote, the spread income a maker lives on.
 
 While the tape is silent (the published subgraph still syncing to the fork block) it makes random swaps through the pool instead, so prints exist and the price wobbles. Fills go through the `Taker` contract and Aqua's push, so the registry, the subgraph and Aquascan see them like any other fill. Knobs are environment variables in `arena/src/config.ts`.
+
+## Generations (`agents/`)
+
+With the gym up and the engine running, the evolution loop opens a generation, lets every gladiator's mind write and ship its program, trades for `GEN_MINUTES`, scores from the gym Aquascan, attests and closes:
+
+```
+GENERATIONS=2 GEN_MINUTES=8 yarn workspace @naumachy/agents evolve          # needs ANTHROPIC_API_KEY in .env
+GLADIATOR_MIND=heuristic yarn workspace @naumachy/agents evolve             # the control line, no key
+```
+
+Each gladiator's knobs, program, rationale and what it saw land in `infra/data/gym/generations/`; generation 0 (the lanista's four seed variations from `arena/src/generation.ts open`) is written there by hand so the minds can read it.

@@ -122,11 +122,21 @@ Tools (names final, schemas TBD):
 
 The gladiators use the Subgraph MCP against the subgraphs for raw questions and this server for derived ones.
 
-## 5. Agents to arena contract
+## 5. Agents to arena contract - `agents`
 
-- Gladiator process reads: generation state, its own bankroll, rival fills (MCP), tape window.
-- Gladiator process writes: a validated program, shipped to Aqua from its own wallet.
-- Lanista process: opens and closes generations, attests scores, triggers promotion (device tap).
+One process per gladiator per generation (`agents/src/gladiator.ts`), driven by the evolution loop (`agents/src/evolve.ts`) or standalone.
+
+- Reads: the arena subgraph (generations, entries, attested scores, champion), the gym Aquascan API (`/api/strategy/base/<maker><router><strategyHash>`: live 5-minute markout, band, fills, decoded fee), the pools subgraph (the pool's last prints: price, prints per minute, realized volatility), and the generation files of every entry (knobs; its own rationale only).
+- Decides: knobs of the anchored archetype through the Claude API (`claude-opus-5`, adaptive thinking, structured output against `KnobsSchema`), or the heuristic control when `GLADIATOR_MIND=heuristic`.
+- Validates: on a private anvil forked from the gym, ships the draft and quotes both ways at a twentieth of the ledger.
+- Writes: docks its previous programs, `Aqua.ship` from its own wallet, `ArenaRegistry.register` (first time) and `enter`; then `infra/data/gym/generations/<generation>-<address>.json`:
+
+```json
+{ "generation": 1, "name": "steady", "address": "0x…", "knobs": { "feeBaseBps": 15, "feeSlopeBps": 140, "feeMaxBps": 80, "windowSeconds": 600, "depth": 50, "capBps": 2000, "parent": "0x… or null", "rationale": "…" },
+  "program": "0x…", "blob": "0x…", "strategyHash": "0x…", "draft": { "usdcFor1Weth": "…", "wethFor1000Usdc": "…" }, "context": { "generations": [], "pool": {}, "me": {} } }
+```
+
+- Lanista process (`evolve.ts`): opens or reuses the generation, runs the gladiators in turn, waits `GEN_MINUTES`, scores every entry from Aquascan, attests, closes with the champion. Env: `GENERATIONS`, `GEN_MINUTES`, `GLADIATORS` (`name:key,…`), `GLADIATOR_MODEL`, `GLADIATOR_EFFORT`, `GLADIATOR_MIND`, `ANTHROPIC_API_KEY`.
 
 ## 6. Enrichment expectations (Aquascan reads the gateway)
 
