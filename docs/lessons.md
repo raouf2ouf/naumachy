@@ -32,15 +32,21 @@ Facts and rules about Aqua, SwapVM, the mainnet corpus, P&L, and explorer UX tha
 - Corpus-wide 1h markout is about minus 4 bps of adverse selection, consistent with corpus edge.
 - BSC desks market-make tokenized stocks (TSLAon, SPYon, NVDAon).
 - Makers pay no fill gas; takers execute. Only ship and dock transactions cost the maker gas.
+- Aqua is the 1INCH venue: pairs with 1INCH on one side are 98.6 percent of priced volume all time and 99.4 percent of the last 30 days (early September 2026). The rest is a few million dollars of Ethereum majors and BSC tokenized stocks.
+- The 1INCH tape on Aqua runs about nine fills a minute and twenty times Binance's 1INCH/USDT volume; the Uniswap 1INCH pools are dead. No external source is sharper than the venue itself, which is why the reference price is the tape.
+- 94.6 percent of Ethereum volume runs programs with a flat maker fee of 0.10 bps and a 0.025 bps protocol fee (fee base 1e9). At that fee a static curve cannot cover adverse selection; the two to five bps bleed is the cost of near-free liquidity hit by professional takers (one taker took 58 percent of a month's volume, three took 83 percent; none is the public 1inch router).
 
 ## P&L rules
 
 - **Only economic fills count.** Roughly a fifth of settlement groups on mainnet are push-only virtual inventory declarations with sentinel amounts (2^53-1 times 1e8 style, or above total supply) and no matching ERC-20 Transfer. They are not trades. A naive rollup ranks them first with 10^21 dollars of volume. Volume, edge, P&L, prices and leaderboards use only groups where value moved both ways in one tx. One-sided groups stay visible as events. The arena scorer applies the same filter.
-- Fills are per-tx per-strategy token nets. Protocol-fee pulls net against the incoming token automatically, so implied prices and edge are net of protocol fees by construction.
+- Fills are per-tx per-strategy token nets. Protocol-fee pulls net against the incoming token automatically, so implied prices and edge are net of protocol fees by construction; the maker's own flat fee is inside the pushed amount, so it is inside the edge. Both are readable from the program bytes: `FeeFlatIn` args are 4 bytes on a 1e9 base, `AquaProtocolFeeIn` args are 4 bytes of rate plus the 20-byte recipient.
 - Numeraire: stable if present (including EUR stables), else the most traded token by settlement legs, tie-break by address. Deterministic.
 - Mark: 24h VWAP of the strategy's own two-sided fills per pair, anchored at the pair's last fill. Store and show mark age.
 - USD: DefiLlama coins API, per fill hour, batched, own pacer around 12 calls per minute, provenance stored per row (source, actual timestamp, confidence), negative cache for uncovered hours. CoinGecko's free tier cannot cover a corpus this size. Store every address lowercase.
-- Markouts at 1h and 24h are honest at hourly price granularity. Sub-hour markouts need minute-level reference prices. Never fake them.
+- Markout at a horizon is the fill re-marked at the reference price that much later: signed quantity times (reference later minus fill price), which equals edge plus drift. Drift alone is the adverse-selection component; never present it as the re-marked figure. References come from the venue tape by the minute, so 5-minute markouts exist wherever the pair has other prints; where it does not, the hourly price stands in and the number says so.
+- A tape reference needs guards: exact numeric sums (float cumulative sums lose the small windows to cancellation), no dust prints, and a plausibility band around the fill's own price. Without them a single dust print turns a desk's edge into nonsense.
+- The fill-time edge flatters and the five-minute markout is the honest edge. Against the tape at fill time, 20 of 202 Ethereum desks over $100K looked profitable; five minutes later, 6, and only 2 at two standard errors. Excluding the maker's own later prints from the later references moved the corpus five-minute number from -3.2 to -3.8 bps: a maker's own stale curve is not a reference.
+- Venue and world disagree by about 20 bps per fill (tape versus Binance minute, median, unbiased) and by hundreds on dislocation days. No paid source removes that; averaging over fills does. Show the band, not a claim.
 - Same-wallet self-trades are rare; operators split mirrored desks across wallets. Common-funder clustering is the heuristic that catches it. Present wash signals as evidence and lower bounds, never as badges.
 - Wallet P&L is deposit-adjusted equity: V(t1) minus V(t0) minus net external flows. Balance anchors via multicall, historical balances derived from transfers, no archive RPC.
 - Rebasing tokens break transfer-derived balances. Native ETH is a separate lane.

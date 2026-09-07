@@ -98,7 +98,8 @@ Read-only JSON. All amounts as strings, all addresses lowercase, every priced nu
 - `GET /api/wallet/:address`
 - `GET /api/search?q=` makers, strategies, templates, gladiators.
 - `GET /api/arena/generations`, `GET /api/arena/gladiator/:address`
-- `GET /api/health` freshness per lane (subgraph head block, enrichment cursor, price coverage).
+- `GET /api/health` freshness per lane (subgraph head block, enrichment cursor, price coverage, share of fills referenced on the tape).
+- Every scored number is `{value, source, at, confidence}`; scored rows carry edge, markout at 5 min, 1 h and 1 d, drift, maker and protocol fees, and the share of fills whose reference is the venue tape. Strategies and desks expose their decoded fee instructions.
 
 ## 4. Aquascan MCP server - `mcp`
 
