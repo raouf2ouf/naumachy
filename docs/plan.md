@@ -107,12 +107,21 @@ Repo, `CLAUDE.md`, plan, lessons, interfaces, decisions, commit queue.
 
 ## 3. Sequencing by dependency
 
-1. M1 before any agent code: the opcode design decides what programs can express.
-2. The subgraph schema (interfaces) before enrichment, web, agents, or MCP: everything downstream reads it.
-3. Local graph-node on the fork before the gym loop: the scorer must exist before the first generation.
-4. Key Ring spike early, in parallel with M2: if headless decrypt on a host without USB does not work, the Ledger story degrades to device approval only, and we want to know that before M5.
-5. Substreams and the MCP server can start any time after the schema; they do not block the arena.
-6. Video last, but the recorded gym runs that feed it come from M4.
+Agreed 2026-09-07 evening, after M1 to M4 ran on the gym. Each step unblocks the next; no time budgets.
+
+1. **Flow fix in the taker engine** (Raouf's vertical). Uninformed orders pick the best quote among the gladiators and the pool within a random tolerance; the informed flow stays. Generation 3's champion was the highest fee because the old flow took any price; nothing recorded before this fix is worth recording.
+2. **Keys and devices** (Raouf, in parallel): Opus 4.8 key in `.env`; Ledger Sync app on the Flex, `ring init`, the Base account discovered; the VPS ordered and a subdomain pointed at it; Kate told an Arena page is coming in her app.
+3. **First minded season on the gym**, on the baked context, as soon as the key is in.
+4. **Subgraph MCP inside the minds**: the mind queries the arena and pools subgraphs itself through The Graph's Subgraph MCP (fallback: a tool of ours running the same GraphQL against the gateway); its queries land in the generation file. Second season with it. This is the composition claim (GA.1) and the load-bearing claim (GB.1).
+5. **Arena page in Aquascan**: generations, entries, attested score beside the live figure, champion, lineage, knobs diff, rationale. Interface written first, Kate informed.
+6. **Base**: six keys generated into the encrypted secrets file, the lean float funded by Raouf, contracts deployed, arena subgraph published to the network, mainnet Aquascan pointed at our router.
+7. **VPS and Ledger**: Aquascan migrated, Caddy, the hourly arena loop booting from Key Ring; one attempt at USB/IP enrollment, then the transplant fallback, documented either way. The promotion step in the lanista, then Raouf's first tap on the Flex.
+8. **Aquascan MCP server** (`mcp/`): the analyst over the API including the arena endpoints. Built by Raouf's vertical, Kate informed.
+9. **Predator versus defended maker** in the gym, recorded and scored: the pool-manipulation take against a flat-fee maker, then against ToxicityFee plus RiskCap.
+10. **Proof pieces**: root README for judges, the boundary document, feedback pages for The Graph and Ledger completed, the Graph composition story written explicitly; the repo flipped public here, not at the last hour. If time remains: the fillable-liquidity lane through The Graph's Token API as a second composition.
+11. **Video** (Kate and Raouf), from recorded runs and the live Arena page; feature freeze before it; submission form the morning before the deadline.
+
+Worst odds: the enrollment hack (fallback exists), minds producing boring knobs (step 1 is the remedy), Base needing enough hours of generations to look like an arena before the video (which is why step 6 precedes steps 8 to 10).
 
 ## 4. Ownership
 
@@ -123,6 +132,7 @@ Repo, `CLAUDE.md`, plan, lessons, interfaces, decisions, commit queue.
 ## 5. Open verifications
 
 - The Graph mentor: Base subgraph of our own contracts counts as live data from a Graph provider.
+- The Graph mentor: a network-published subgraph over our own registry, read by the gladiators through the Subgraph MCP, counts as composing two Graph products; and whether a fillable-liquidity lane through the Token API counts as a second composition.
 - The Graph: Substreams support on Base and Ethereum for the disassembler (expected yes).
 - Ledger: Key Ring headless decrypt mechanics on a VPS, from the docs at developers.ledger.com and the Telegram group.
 - 1inch: which router variant sits at the canonical Base address, and the license line for submodules in the README.
