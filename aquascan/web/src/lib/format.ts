@@ -60,6 +60,20 @@ export function amount(raw: string, decimals: number | null, symbol: string | nu
   return `${neg ? "-" : ""}${compact(value, 3)} ${symbol ?? "?"}`;
 }
 
+// Fee rates: basis points with the precision a 0.10 bps fee needs, never trailing zeros.
+export function feeBps(x: number | null | undefined): string {
+  if (x === null || x === undefined) return "";
+  const s = x >= 10 ? x.toFixed(0) : x >= 1 ? x.toFixed(1).replace(/\.0$/, "") : x.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  return `${s} bps`;
+}
+
+// A rate with its uncertainty: "-3.6 ± 0.4 bps". One decimal, the band rounded up so it never reads sharper than it is.
+export function bandText(b: { bps: number; se: number | null } | null | undefined): string | null {
+  if (!b) return null;
+  const v = `${b.bps > 0 ? "+" : ""}${b.bps.toFixed(1)}`;
+  return b.se === null ? `${v} bps` : `${v} ± ${(Math.ceil(b.se * 10) / 10).toFixed(1)} bps`;
+}
+
 export function percent(x: number | null | undefined): string {
   if (x === null || x === undefined) return "";
   const v = x * 100;

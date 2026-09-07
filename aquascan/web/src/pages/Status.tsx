@@ -14,7 +14,7 @@ export function Status() {
       <p className="text-ink-muted text-[13px] mt-1 max-w-2xl">Where each chain's lane stands against its subgraph, and how much of it is priced. Rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}.</p>
       <div className="overflow-x-auto panel mt-5">
         <table>
-          <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">Updated</th></tr></thead>
+          <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">On the tape</th><th className="num">Updated</th></tr></thead>
           <tbody>{h.chains.map((c) => (
             <tr key={c.chain}>
               <td>{CHAIN_NAME[c.chain]}</td>
@@ -23,11 +23,12 @@ export function Status() {
               <td className={`num ${c.blocks_behind !== null && c.blocks_behind > 1000 ? "loss" : "text-ink-muted"}`}>{c.blocks_behind?.toLocaleString() ?? "-"}</td>
               <td className="num">{compact(c.economic_fills, 0)}</td>
               <td className="num"><span className="inline-block w-24 h-1.5 bg-water-700 rounded align-middle mr-2"><span className="block h-1.5 rounded bg-bronze-deep" style={{ width: `${Math.round(c.priced_ratio * 100)}%` }} /></span>{Math.round(c.priced_ratio * 100)}%</td>
+              <td className="num text-ink-muted">{Math.round(c.tape_ratio * 100)}%</td>
               <td className="num text-ink-muted">{relTime(new Date(c.updated_at).getTime() / 1000)}</td>
             </tr>))}</tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-faint mt-4 max-w-2xl">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills whose every leg has a DefiLlama price at the fill hour; the rest stay unpriced rather than guessed.</p>
+      <p className="text-xs text-ink-faint mt-4 max-w-2xl">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills that carry a dollar figure; on the tape is the share of those whose reference price came from the pair's other fills within minutes rather than from DefiLlama's hourly price.</p>
     </div>
   );
 }

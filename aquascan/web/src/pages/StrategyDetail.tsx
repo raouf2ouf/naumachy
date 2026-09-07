@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { api, type Chain, type Leg } from "../lib/api";
-import { absTime, amount, bps, compact, percent, relTime, shortAddr } from "../lib/format";
+import { api, type Chain, type Leg, type StrategyFees } from "../lib/api";
+import { absTime, amount, compact, feeBps, percent, relTime, shortAddr, usd } from "../lib/format";
 import { Addr, ChainChip, Failed, Loading, Money, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
-import { Tile } from "./DeskDetail";
+import { FillLine, ScoreTiles } from "./DeskDetail";
 
 function LegsSentence({ legs }: { legs: Leg[] }) {
   const received = legs.filter((l) => !l.net.startsWith("-") && l.net !== "0");
@@ -15,6 +15,23 @@ function LegsSentence({ legs }: { legs: Leg[] }) {
       {received.length > 0 && gave.length > 0 && ", "}
       {gave.length > 0 && <>gave <b className="font-medium">{gave.map((l) => amount(l.net.slice(1), l.decimals, l.symbol)).join(", ")}</b></>}
     </span>
+  );
+}
+
+function FeeSentence({ fees, makerFee, protocolFee }: { fees: StrategyFees | null; makerFee?: { value: number | null }; protocolFee?: { value: number | null } }) {
+  if (!fees || !fees.decoded) return <>Fee instructions could not be read: the router's dialect is unknown.</>;
+  const maker = fees.maker_fee_kind === null ? "No maker fee instruction" : fees.maker_fee_kind === "progressive"
+    ? `A progressive maker fee on the token it ${fees.maker_fee_side === "in" ? "takes in" : "gives out"}`
+    : `A flat maker fee of ${feeBps(fees.maker_fee_bps)} on the token it ${fees.maker_fee_side === "in" ? "takes in" : "gives out"}, kept by the maker`;
+  const protocol = fees.protocol_fee_kind === null ? "no protocol fee" : fees.protocol_fee_kind === "dynamic"
+    ? <>a protocol fee set per swap by provider <span className="mono" title={fees.protocol_fee_provider ?? ""}>{shortAddr(fees.protocol_fee_provider ?? "", 8, 4)}</span></>
+    : <>a protocol fee of {feeBps(fees.protocol_fee_bps)} pulled out of the maker's ledger, paid to <span className="mono" title={fees.protocol_fee_to ?? ""}>{shortAddr(fees.protocol_fee_to ?? "", 8, 4)}</span></>;
+  return (
+    <>{maker}; {protocol}.
+      {makerFee?.value != null && <> About {usd(makerFee.value)} of maker fees earned</>}
+      {protocolFee?.value != null && protocolFee.value > 0 && <>{makerFee?.value != null ? " and " : " "}{usd(protocolFee.value)} of protocol fees paid</>}
+      {(makerFee?.value != null || (protocolFee?.value != null && protocolFee.value > 0)) && " so far."}
+    </>
   );
 }
 
@@ -40,15 +57,15 @@ export function StrategyDetail() {
         {s.docked_at ? <>, docked <When ts={s.docked_at} />. Docked means revoked: tokens never left the wallet.</> : <>. Still live.</>}
       </p>
 
-      {st ? (
-        <div className="mt-5 grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="panel px-4 py-3"><div className="text-xs text-ink-muted">Economic fills</div><div className="text-lg mt-0.5">{compact(st.fills, 0)}</div><div className="text-xs text-ink-faint">first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} /></div></div>
-          <Tile label="Volume" p={st.volume_usd} />
-          <Tile label="Edge at fill time" p={st.edge_usd} signed colored sub={bps(st.edge_usd.value, st.volume_usd.value)} />
-          <Tile label="Markout, 1 hour" p={st.markout_1h_usd} signed colored />
-          <Tile label="Position at latest prices" p={st.pnl_usd_marked} signed colored />
-        </div>
-      ) : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
+      {st ? <ScoreTiles s={st} /> : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
+      {st && (
+        <p className="text-xs text-ink-faint mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against the pair's other prints within minutes, the rest against hourly prices.</> : <>Scored against hourly prices: no other prints of this pair nearby.</>}</p>
+      )}
+
+      <div className="mt-4 panel px-5 py-4 text-[13px]">
+        <div className="text-xs text-ink-muted">Fees, read from the program</div>
+        <p className="mt-1"><FeeSentence fees={s.fees} makerFee={st?.maker_fee_usd} protocolFee={st?.protocol_fee_usd} /></p>
+      </div>
 
       {st?.pnl_quote && (
         <div className="mt-4 panel px-5 py-4">
@@ -88,13 +105,7 @@ export function StrategyDetail() {
       <Section title="Economic fills" aside={`${s.fills.length} of ${s.fills_total}, newest first`}>
         <div className="panel divide-y divide-water-700">
           {s.fills.map((f) => (
-            <div key={f.id} className="px-4 py-2.5 text-[13px] flex items-center gap-3 flex-wrap">
-              {f.legs && <LegsSentence legs={f.legs} />}
-              <span className="text-ink-faint">edge <Money p={f.edge_usd} signed colored /></span>
-              <span className="text-ink-faint">1 h later <Money p={f.markout_1h_usd} signed colored pending={Date.now() / 1000 - f.ts < 3600} /></span>
-              {f.taker && <span className="text-ink-faint">taker <span className="mono">{shortAddr(f.taker)}</span></span>}
-              <When ts={f.ts} className="text-ink-faint ml-auto" />
-            </div>
+            <FillLine key={f.id} f={f}>{f.legs && <LegsSentence legs={f.legs} />}</FillLine>
           ))}
           {s.fills.length === 0 && <div className="px-4 py-3 text-ink-muted">No economic fills yet.</div>}
           {s.fills.length < s.fills_total && <button onClick={() => setLimit((n) => n + 100)} className="w-full py-2.5 text-[13px] text-bronze hover:bg-water-800">Show more, {s.fills.length} of {s.fills_total}</button>}

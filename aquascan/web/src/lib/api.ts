@@ -2,31 +2,44 @@ export interface Priced { value: number | null; source: string; at: string; conf
 export type Chain = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon" | "bsc";
 export const CHAINS: Chain[] = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc"];
 
+// Every scored row carries the same set: edge at fill time, markouts at three horizons, the drift
+// (markout minus edge), fees, and the share of its fills referenced on the venue tape.
+export interface Band { bps: number; se: number | null }   // a volume-weighted rate and its standard error
+export interface Scored {
+  volume_usd: Priced; edge_usd: Priced; markout_5m_usd: Priced; markout_1h_usd: Priced; markout_24h_usd: Priced;
+  drift_1h_usd: Priced; drift_24h_usd: Priced; protocol_fee_usd: Priced; maker_fee_usd: Priced; tape_ratio: number;
+  markout_5m_bps: Band | null; markout_1h_bps: Band | null;
+}
+export interface FeeTier { maker_fee_bps: number | null; kind: string | null; strategies: number; volume_usd: number | null; share: number }
+export interface ProtocolRecipient { recipient: string | null; kind: string | null; bps_min: number | null; bps_max: number | null; fee_usd: number | null; volume_usd: number | null }
 export interface Overview {
   window: string; chain: string; rollup_at: string;
-  hero: { economic_fills: number; strategies_active: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced; markout_24h_usd: Priced };
+  hero: Scored & { economic_fills: number; strategies_active: number };
+  fees: { maker_fee_bps: number | null; tiers: FeeTier[]; protocol: ProtocolRecipient[] };
   totals: { strategies: number; live: number; desks: number; makers: number };
-  chains: { chain: Chain; fills: number; volume_usd: Priced; edge_usd: Priced }[];
+  chains: { chain: Chain; fills: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced }[];
   top_desks: DeskSummary[];
   latest_ships: { chain: Chain; id: string; maker: string; desk: string; template: string; template_name: string | null; registry: string; shipped_at: number; shipped_tx: string; status: string }[];
 }
-export interface DeskSummary { chain: Chain; desk: string; maker: string; maker_label?: string | null; template: string; template_name?: string | null; template_kind?: string | null; fills: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced }
-export interface DeskRow extends DeskSummary { strategies: number; live: number; markout_24h_usd: Priced; pnl_usd_marked: Priced; first_seen: number | null; last_seen: number | null }
-export interface Series { window: string; chain: string; rollup_at: string; source: string; days: { day: number; date: string; fills: number; volume_usd: number | null; edge_usd: number | null; markout_1h_usd: number | null }[] }
+export interface DeskSummary extends Scored { chain: Chain; desk: string; maker: string; maker_label?: string | null; template: string; template_name?: string | null; template_kind?: string | null; fills: number; maker_fee_bps: number | null }
+export interface DeskRow extends DeskSummary { strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
+export interface Series { window: string; chain: string; rollup_at: string; source: string; days: { day: number; date: string; fills: number; volume_usd: number | null; edge_usd: number | null; markout_5m_usd: number | null; markout_1h_usd: number | null; drift_1h_usd: number | null; protocol_fee_usd: number | null; maker_fee_usd: number | null }[] }
 export interface PnlQuote { value: number; quote_token: string; quote_symbol?: string | null; coverage: number; mark_age_s?: number | null; source: string }
-export interface StrategyRow { id: string; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }
-export interface FillRow { id: string; tx: string; block: number; ts: number; taker: string | null; shape: string; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced; legs?: Leg[] }
+export interface StrategyRow extends Scored { id: string; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; maker_fee_bps: number | null; protocol_fee_bps: number | null; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }
+export interface FillRow { id: string; tx: string; block: number; ts: number; taker: string | null; shape: string; volume_usd: Priced; edge_usd: Priced; markout_5m_usd: Priced; markout_1h_usd: Priced; drift_1h_usd: Priced; protocol_fee_usd: Priced; ref_kind: string | null; ref_window_min: number | null; ref_fills: number | null; legs?: Leg[] }
 export interface Leg { token: string; symbol: string | null; decimals: number | null; net: string; pushed: string; pulled: string }
-export interface DeskDetail extends DeskRow { strategies_list?: never; strategies: number; recent_fills: FillRow[] }
-export interface DeskDetailFull extends Omit<DeskRow, "strategies"> { strategies: StrategyRow[]; strategies_total: number; instructions: string[] | null; recent_fills: FillRow[] }
+export interface DeskFees { decoded: number; strategies: number; maker_fee_bps: number | null; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; maker_kinds: string[]; maker_sides: string[]; protocol_fee_bps_min: number | null; protocol_fee_bps_max: number | null; protocol_recipients: string[]; protocol_kinds: string[] }
+export interface DeskDetailFull extends Omit<DeskRow, "strategies"> { strategies: StrategyRow[]; strategies_total: number; instructions: string[] | null; fees: DeskFees; recent_fills: FillRow[] }
 export interface Mark { base_token: string; base_symbol: string | null; quote_token: string; quote_symbol: string | null; price: number | null; vwap_raw: number; fills: number; mark_ts: number }
+export interface StrategyFees { decoded: boolean; maker_fee_bps: number | null; maker_fee_side: string | null; maker_fee_kind: string | null; protocol_fee_bps: number | null; protocol_fee_to: string | null; protocol_fee_kind: string | null; protocol_fee_provider: string | null }
 export interface StrategyDetail {
   chain: Chain; id: string; strategy_hash: string; registry: string; maker: string; maker_label: string | null; app: string; app_label: string | null; desk: string; template: string; template_name: string | null; template_kind: string | null; instructions: string[] | null; fills_total: number; program: string; parsed: boolean;
   tokens: string[]; amounts: string[]; shipped_at: number; shipped_tx: string; docked_at: number | null; docked_tx: string | null; status: string;
-  stats: { fills: number; first_fill_ts: number; last_fill_ts: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced; markout_24h_usd: Priced; pnl_usd_marked: Priced; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number } | null;
+  fees: StrategyFees | null;
+  stats: (Scored & { fills: number; first_fill_ts: number; last_fill_ts: number; pnl_usd_marked: Priced; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }) | null;
   marks: Mark[]; fills: FillRow[];
 }
-export interface Health { rollup_at: string; chains: { chain: Chain; cursor: number; subgraph_head: number | null; blocks_behind: number | null; updated_at: string; economic_fills: number; priced_ratio: number }[] }
+export interface Health { rollup_at: string; chains: { chain: Chain; cursor: number; subgraph_head: number | null; blocks_behind: number | null; updated_at: string; economic_fills: number; priced_ratio: number; tape_ratio: number }[] }
 export interface SearchResult { makers: { chain: Chain; maker: string }[]; strategies: { chain: Chain; id: string; strategy_hash: string; desk: string; status: string }[]; desks: { chain: Chain; desk: string; maker: string; fills: number }[] }
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
