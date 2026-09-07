@@ -1,0 +1,45 @@
+specVersion: 1.2.0
+description: The Naumachy arena on one chain. Gladiators, generations, entries,
+  attested scores, promotions.
+repository: https://github.com/raouf2ouf/naumachy
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: auto
+dataSources:
+  - kind: ethereum
+    name: ArenaRegistry
+    network: base
+    source:
+      abi: ArenaRegistry
+      address: "0xb3ba00b2045db69331bd0b25bcc22a90244a3f8e"
+      startBlock: 50999187
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Gladiator
+        - Generation
+        - Entry
+        - Score
+        - Promotion
+      abis:
+        - name: ArenaRegistry
+          file: ./abis/ArenaRegistry.json
+      eventHandlers:
+        - event: GladiatorRegistered(indexed address,indexed bytes32,uint32,indexed
+            address)
+          handler: handleGladiatorRegistered
+        - event: GenerationOpened(indexed uint32,bytes32,uint64)
+          handler: handleGenerationOpened
+        - event: StrategyEntered(indexed address,indexed bytes32,indexed uint32,bytes32)
+          handler: handleStrategyEntered
+        - event: Scored(indexed uint32,indexed address,indexed
+            bytes32,int256,int256,uint32,address)
+          handler: handleScored
+        - event: GenerationClosed(indexed uint32,indexed address,bytes32,int256)
+          handler: handleGenerationClosed
+        - event: Promoted(indexed address,indexed bytes32,uint256,uint256)
+          handler: handlePromoted
+      file: ./src/mapping.ts

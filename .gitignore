@@ -26,3 +26,6 @@ substreams/**/target/
 infra/data/
 *.sqlite
 .DS_Store
+
+# generated per fork block by infra/gym/deploy-subgraphs.sh
+subgraphs/*/networks.gym.json

@@ -1084,6 +1084,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@naumachy/subgraph-arena@workspace:subgraphs/arena":
+  version: 0.0.0-use.local
+  resolution: "@naumachy/subgraph-arena@workspace:subgraphs/arena"
+  dependencies:
+    "@graphprotocol/graph-cli": "npm:^0.98.1"
+    "@graphprotocol/graph-ts": "npm:^0.38.2"
+  languageName: unknown
+  linkType: soft
+
 "@naumachy/subgraph-pools@workspace:subgraphs/pools":
   version: 0.0.0-use.local
   resolution: "@naumachy/subgraph-pools@workspace:subgraphs/pools"

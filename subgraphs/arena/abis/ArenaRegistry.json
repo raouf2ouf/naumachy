@@ -1,0 +1,219 @@
+[
+ {
+  "type": "event",
+  "name": "GenerationClosed",
+  "inputs": [
+   {
+    "name": "generation",
+    "type": "uint32",
+    "indexed": true,
+    "internalType": "uint32"
+   },
+   {
+    "name": "champion",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "championStrategy",
+    "type": "bytes32",
+    "indexed": false,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "scoreQuote",
+    "type": "int256",
+    "indexed": false,
+    "internalType": "int256"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "GenerationOpened",
+  "inputs": [
+   {
+    "name": "generation",
+    "type": "uint32",
+    "indexed": true,
+    "internalType": "uint32"
+   },
+   {
+    "name": "tape",
+    "type": "bytes32",
+    "indexed": false,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "openedAt",
+    "type": "uint64",
+    "indexed": false,
+    "internalType": "uint64"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "GladiatorRegistered",
+  "inputs": [
+   {
+    "name": "gladiator",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "name",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "generation",
+    "type": "uint32",
+    "indexed": false,
+    "internalType": "uint32"
+   },
+   {
+    "name": "parent",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "OwnershipTransferred",
+  "inputs": [
+   {
+    "name": "previousOwner",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "newOwner",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "Promoted",
+  "inputs": [
+   {
+    "name": "gladiator",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "strategyHash",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "chainId",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "bankroll",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "Scored",
+  "inputs": [
+   {
+    "name": "generation",
+    "type": "uint32",
+    "indexed": true,
+    "internalType": "uint32"
+   },
+   {
+    "name": "gladiator",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "strategyHash",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "scoreQuote",
+    "type": "int256",
+    "indexed": false,
+    "internalType": "int256"
+   },
+   {
+    "name": "seQuote",
+    "type": "int256",
+    "indexed": false,
+    "internalType": "int256"
+   },
+   {
+    "name": "fills",
+    "type": "uint32",
+    "indexed": false,
+    "internalType": "uint32"
+   },
+   {
+    "name": "quoteToken",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "StrategyEntered",
+  "inputs": [
+   {
+    "name": "gladiator",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "strategyHash",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "generation",
+    "type": "uint32",
+    "indexed": true,
+    "internalType": "uint32"
+   },
+   {
+    "name": "archetype",
+    "type": "bytes32",
+    "indexed": false,
+    "internalType": "bytes32"
+   }
+  ],
+  "anonymous": false
+ }
+]

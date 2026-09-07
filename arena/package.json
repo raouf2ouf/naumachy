@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "engine": "node --env-file=../.env --import tsx src/engine.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generation": "node --env-file=../.env --import tsx src/generation.ts"
   },
   "dependencies": {
     "viem": "^2.37.0"

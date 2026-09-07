@@ -1,0 +1,56 @@
+# The arena: gladiators, generations, entries, attested scores and promotions, as ArenaRegistry
+# emits them. Scores are Aquascan's 5-minute markouts in the quote token, attested by the lanista.
+
+type Gladiator @entity(immutable: false) {
+  id: ID!                                  # wallet address
+  name: Bytes!
+  generationBorn: Int!
+  parent: Gladiator
+  children: [Gladiator!]! @derivedFrom(field: "parent")
+  entries: [Entry!]! @derivedFrom(field: "gladiator")
+  promotions: [Promotion!]! @derivedFrom(field: "gladiator")
+  registeredAt: BigInt!
+  registeredTx: Bytes!
+}
+
+type Generation @entity(immutable: false) {
+  id: ID!                                  # generation number
+  number: Int!
+  tape: Bytes!
+  openedAt: BigInt!
+  closedAt: BigInt
+  champion: Gladiator
+  championStrategy: Bytes
+  championScore: BigInt
+  entries: [Entry!]! @derivedFrom(field: "generation")
+}
+
+type Entry @entity(immutable: false) {
+  id: ID!                                  # generation-strategyHash
+  generation: Generation!
+  gladiator: Gladiator!
+  strategyHash: Bytes!                     # the Aqua strategy hash, which Aquascan's Strategy id ends with
+  archetype: Bytes!
+  enteredAt: BigInt!
+  score: Score
+}
+
+type Score @entity(immutable: false) {
+  id: ID!                                  # generation-strategyHash
+  entry: Entry!
+  scoreQuote: BigInt!                      # 5-minute markouts summed, quote token units
+  seQuote: BigInt!                         # one standard error, same units
+  fills: Int!
+  quoteToken: Bytes!
+  attestedAt: BigInt!
+}
+
+type Promotion @entity(immutable: true) {
+  id: ID!                                  # tx-logIndex
+  gladiator: Gladiator!
+  strategyHash: Bytes!
+  chainId: BigInt!
+  bankroll: BigInt!
+  at: BigInt!
+  tx: Bytes!
+}

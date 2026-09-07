@@ -1,0 +1,14 @@
+{
+  "name": "@naumachy/subgraph-arena",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build --network base --network-file networks.json",
+    "deploy:studio": "graph deploy naumachy-arena-base"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1",
+    "@graphprotocol/graph-ts": "^0.38.2"
+  }
+}

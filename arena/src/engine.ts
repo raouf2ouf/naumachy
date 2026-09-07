@@ -32,7 +32,7 @@ async function main() {
   log(`engine ${account.address} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps`);
 
   let gladiators: Gladiator[] = []; let tapeIndex = 0; const started = Date.now();
-  let fills = 0; let arbs = 0;
+  let fills = 0; let arbs = 0; let tick = 0;
   try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
   for (;;) {
     const elapsed = (Date.now() - started) / 1000;
@@ -67,7 +67,8 @@ async function main() {
           args: [{ tokenIn: sellWeth ? cfg.weth : cfg.usdc, tokenOut: sellWeth ? cfg.usdc : cfg.weth, fee: 500, recipient: account.address, amountIn, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
       } catch (err) { log(`pool noise failed: ${String(err).slice(0, 120)}`); }
     }
-    if (Math.floor(elapsed) % 30 === 0 || gladiators.length === 0) {
+    tick += 1;
+    if (tick % 15 === 1 || gladiators.length === 0) {     // every 15 ticks, about half a minute, the roster is re-read
       try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
     }
     const price = await pub.readContract({ address: cfg.oracle, abi: oracleAbi, functionName: "latestAnswer" });   // USDC per WETH, 1e18

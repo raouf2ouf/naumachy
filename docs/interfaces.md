@@ -77,16 +77,20 @@ Swaps of a fixed set of Uniswap v3 pools on Base, entities named as the Uniswap 
 
 Source: `ArenaRegistry` (contracts/src/ArenaRegistry.sol). Runs on the local graph-node for the gym and on The Graph Network for Base.
 
-Events (draft, emitted by the contract):
+Events (as emitted by `ArenaRegistry`):
 
 ```solidity
 event GladiatorRegistered(address indexed gladiator, bytes32 indexed name, uint32 generation, address indexed parent);
+event GenerationOpened(uint32 indexed generation, bytes32 tape, uint64 openedAt);
 event StrategyEntered(address indexed gladiator, bytes32 indexed strategyHash, uint32 indexed generation, bytes32 archetype);
+event Scored(uint32 indexed generation, address indexed gladiator, bytes32 indexed strategyHash, int256 scoreQuote, int256 seQuote, uint32 fills, address quoteToken);
 event GenerationClosed(uint32 indexed generation, address indexed champion, bytes32 championStrategy, int256 scoreQuote);
 event Promoted(address indexed gladiator, bytes32 indexed strategyHash, uint256 chainId, uint256 bankroll);
 ```
 
-Entities: `Gladiator` (address, name, generation born, parent, strategies), `Generation` (number, opened, closed, champion, tape id), `Entry` (gladiator, strategy, generation, archetype), `Promotion`. Lineage is a tree through `parent`.
+Gladiators register and enter from their own wallets; the lanista (the contract owner) opens and closes generations, attests one score per entry, and promotes. An entry's `strategyHash` is the Aqua strategy hash, the tail of Aquascan's strategy id, so the two subgraphs join on it.
+
+Entities: `Gladiator` (address, name, generation born, parent, entries), `Generation` (number, tape, opened, closed, champion), `Entry` (generation, gladiator, strategy hash, archetype, score), `Score` (score, standard error, fills, quote token), `Promotion`. Lineage is a tree through `parent`.
 
 Score semantics: `scoreQuote` is the sum of the gladiator's 5-minute markouts in the quote token over the generation, economic fills only, as Aquascan computes it against the route reference (the pool at the block on Base); its standard error travels with it. The contract stores it as attested by the lanista process; the subgraph does not recompute it.
 

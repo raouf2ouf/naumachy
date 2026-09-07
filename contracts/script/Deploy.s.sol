@@ -6,6 +6,7 @@ import { NaumachyRouter } from "../src/NaumachyRouter.sol";
 import { PoolPriceOracle } from "../src/oracles/PoolPriceOracle.sol";
 import { Taker } from "../src/arena/Taker.sol";
 import { TakerData } from "../src/arena/TakerData.sol";
+import { ArenaRegistry } from "../src/ArenaRegistry.sol";
 
 /// @dev Deploys the router against the canonical Aqua registry and one pool oracle. The same script
 ///   serves the gym (an anvil fork of Base) and the live arena on Base; the chain decides nothing.
@@ -22,8 +23,10 @@ contract Deploy is Script {
         PoolPriceOracle oracle = new PoolPriceOracle(pool);
         Taker taker = new Taker(aqua, address(router));
         TakerData takerData = new TakerData();
+        ArenaRegistry arena = new ArenaRegistry(vm.envOr("LANISTA", msg.sender));
         vm.stopBroadcast();
         console.log("TakerData", address(takerData));
+        console.log("ArenaRegistry", address(arena), "lanista", arena.owner());
         console.log("NaumachyRouter", address(router));
         console.log("PoolPriceOracle", address(oracle), "base", oracle.base());
         console.log("Taker", address(taker));
