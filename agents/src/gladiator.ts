@@ -11,6 +11,7 @@ import { gladiator as registry, arenaAbi } from "@naumachy/arena/lanista";
 import { routerAbi, takerDataAbi } from "@naumachy/arena/abi";
 import { gatherContext } from "./context.js";
 import { decide, type Knobs } from "./mind.js";
+import { graphSetup } from "./tools.js";
 
 const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
 
@@ -30,7 +31,10 @@ export async function runGladiator(cfg: Config, client: Anthropic, key: Hex, myN
   const dir = `${REPO_ROOT}infra/data/gym/generations`; mkdirSync(dir, { recursive: true });
 
   const ctx = await gatherContext(cfg, api, account.address, myName);
-  const knobs = await decide(client, ctx);
+  const graph = graphSetup(cfg);
+  const { knobs, transcript, mode, usage } = await decide(client, ctx, graph, api);
+  if (transcript.length) log(`   ${myName} read ${transcript.length} things first (${mode}): ${transcript.map((t) => t.tool).join(", ")}`);
+  if (usage.calls) log(`   tokens: ${usage.input} in, ${usage.output} out, ${usage.cache_read} cached, over ${usage.calls} calls`);
   log(`${myName} decides: fee ${knobs.feeBaseBps} bps (slope ${knobs.feeSlopeBps}, max ${knobs.feeMaxBps}, window ${knobs.windowSeconds}s), depth ${knobs.depth}x, cap ${knobs.capBps} bps, parent ${knobs.parent ?? "none"}`);
   log(`   ${knobs.rationale}`);
 
@@ -45,7 +49,7 @@ export async function runGladiator(cfg: Config, client: Anthropic, key: Hex, myN
   const shipped = await ship(pub, wallet, cfg.aqua, cfg.router, program, [cfg.weth, cfg.usdc], ledger);
   await registry.register(pub, wallet, arena, stringToHex(myName, { size: 32 }), "0x0000000000000000000000000000000000000000").catch(() => null);   // already registered: fine
   await registry.enter(pub, wallet, arena, shipped.strategyHash, ARCHETYPE_ANCHORED);
-  writeFileSync(`${dir}/${generation}-${account.address.toLowerCase()}.json`, JSON.stringify({ generation, name: myName, address: account.address, knobs, program, blob: shipped.blob, strategyHash: shipped.strategyHash, draft: { usdcFor1Weth: draft.usdcFor1Weth.toString(), wethFor1000Usdc: draft.wethFor1000Usdc.toString() }, context: ctx }, null, 1));
+  writeFileSync(`${dir}/${generation}-${account.address.toLowerCase()}.json`, JSON.stringify({ generation, name: myName, address: account.address, mind: mode, model: process.env.GLADIATOR_MODEL ?? null, effort: process.env.GLADIATOR_EFFORT ?? null, usage, knobs, transcript, program, blob: shipped.blob, strategyHash: shipped.strategyHash, draft: { usdcFor1Weth: draft.usdcFor1Weth.toString(), wethFor1000Usdc: draft.wethFor1000Usdc.toString() }, context: ctx }, null, 1));
   log(`${myName} shipped ${shipped.strategyHash.slice(0, 12)} and entered generation ${generation}`);
   return { name: myName, key, address: account.address, knobs, strategyHash: shipped.strategyHash, generation };
 }

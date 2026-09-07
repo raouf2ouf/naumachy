@@ -7,7 +7,7 @@ import { REPO_ROOT, type Config } from "@naumachy/arena/config";
 // behaviour. Everything here is public on the gym's subgraphs and API; rivals see the same.
 // The attested score (what the lanista wrote on chain at close) is the verdict of record; the
 // Aquascan numbers beside it are live and keep moving while a program stays shipped.
-export interface Verdict { gladiator: string; name: string; strategyHash: Hex; knobs: Record<string, unknown> | null; attested: { scoreUsd: number; seUsd: number; fills: number } | null; scoreUsd: number | null; bps: number | null; seBps: number | null; fills: number; volume: number | null; edgeUsd: number | null; feeBps: number | null }
+export interface Verdict { gladiator: string; name: string; strategyHash: Hex; knobs: Record<string, unknown> | null; attested: { scoreUsd: number; seUsd: number; fills: number } | null; liveNote: string; scoreUsd: number | null; bps: number | null; seBps: number | null; fills: number; volume: number | null; edgeUsd: number | null; feeBps: number | null }
 export interface GenerationView { number: number; closed: boolean; champion: string | null; verdicts: Verdict[] }
 export interface Context { generations: GenerationView[]; pool: { priceNow: number; movesPerMinute: number; realizedVolBps: number; prints: number }; me: { address: Address; name: string; lastKnobs: unknown | null; lastRationale: string | null; lastVerdict: Verdict | null } }
 
@@ -35,12 +35,13 @@ export async function gatherContext(cfg: Config, api: string, me: Address, myNam
   const g = await gql<{ generations: { number: number; closedAt: string | null; champion: { id: string } | null; entries: { gladiator: { id: string; name: string }; strategyHash: Hex; score: { scoreQuote: string; seQuote: string; fills: number } | null }[] }[] }>(
     arena, `{ generations(orderBy: number, orderDirection: asc) { number closedAt champion { id } entries { gladiator { id name } strategyHash score { scoreQuote seQuote fills } } } }`);
   const generations: GenerationView[] = [];
-  for (const gen of g.generations) {
+  const keep = Number(process.env.CONTEXT_GENERATIONS ?? 6);   // the briefing carries the last few generations; the tools reach the rest
+  for (const gen of g.generations.slice(-keep)) {
     const verdicts: Verdict[] = [];
     for (const e of gen.entries) {
       const strategyId = (e.gladiator.id + cfg.router.slice(2) + e.strategyHash.slice(2)).toLowerCase();
       const attested = e.score ? { scoreUsd: Number(e.score.scoreQuote) / 1e6, seUsd: Number(e.score.seQuote) / 1e6, fills: e.score.fills } : null;
-      let v: Verdict = { gladiator: e.gladiator.id, name: name(e.gladiator.name), strategyHash: e.strategyHash, knobs: generationFile(gen.number, e.gladiator.id)?.knobs ?? null, attested, scoreUsd: null, bps: null, seBps: null, fills: 0, volume: null, edgeUsd: null, feeBps: null };
+      let v: Verdict = { gladiator: e.gladiator.id, name: name(e.gladiator.name), strategyHash: e.strategyHash, knobs: generationFile(gen.number, e.gladiator.id)?.knobs ?? null, attested, liveNote: "scoreUsd, bps, seBps, fills, volume, edgeUsd below are Aquascan live figures over the program's whole life, not the generation", scoreUsd: null, bps: null, seBps: null, fills: 0, volume: null, edgeUsd: null, feeBps: null };
       try {
         const res = await fetch(`${api}/api/strategy/base/${encodeURIComponent(strategyId)}?limit=1`);
         if (res.ok) {
