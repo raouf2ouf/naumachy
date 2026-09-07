@@ -1,0 +1,61 @@
+# The gym's graph-node: indexes the anvil fork of Base (host port 8545) with the same manifests as
+# the network deployments, from the fork block. Its own ports and data so the Base bench in
+# infra/graph-node can run beside it.
+#   docker compose -f infra/gym/docker-compose.yml up -d
+#   http://localhost:8100/subgraphs/name/naumachy/aqua-gym/graphql
+#   http://localhost:8100/subgraphs/name/naumachy/pools-gym/graphql
+name: gym
+services:
+  graph-node:
+    image: graphprotocol/graph-node:latest
+    ports:
+      - "8100:8000"
+      - "8101:8001"
+      - "8120:8020"
+      - "8130:8030"
+      - "8140:8040"
+    depends_on:
+      - ipfs
+      - postgres
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      postgres_host: postgres
+      postgres_user: graph-node
+      postgres_pass: let-me-in
+      postgres_db: graph-node
+      ipfs: "ipfs:5001"
+      ethereum: "base:http://host.docker.internal:8545"
+      GRAPH_LOG: info
+      GRAPH_ETHEREUM_MAX_BLOCK_RANGE_SIZE: "2000"
+      ETHEREUM_POLLING_INTERVAL: "1000"
+      GRAPH_ETHEREUM_FETCH_TXN_RECEIPTS_IN_BATCHES: "true"
+      GRAPH_ETHEREUM_BLOCK_INGESTOR_MAX_CONCURRENT_JSON_RPC_CALLS_FOR_TXN_RECEIPTS: "10"
+      GRAPH_ETHEREUM_REORG_THRESHOLD: "2"
+  ipfs:
+    image: ipfs/kubo:v0.17.0
+    ports:
+      - "5101:5001"
+    volumes:
+      - ../data/gym/ipfs:/data/ipfs
+  postgres:
+    image: postgres:16
+    command: ["postgres", "-cshared_preload_libraries=pg_stat_statements", "-cmax_connections=200"]
+    environment:
+      POSTGRES_USER: graph-node
+      POSTGRES_PASSWORD: let-me-in
+      POSTGRES_DB: graph-node
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - ../data/gym/postgres:/var/lib/postgresql/data
+  aquascan-postgres:
+    image: postgres:16
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_USER: aquascan
+      POSTGRES_PASSWORD: aquascan
+      POSTGRES_DB: aquascan
+    volumes:
+      - ../data/gym/aquascan:/var/lib/postgresql/data

@@ -88,7 +88,7 @@ event Promoted(address indexed gladiator, bytes32 indexed strategyHash, uint256 
 
 Entities: `Gladiator` (address, name, generation born, parent, strategies), `Generation` (number, opened, closed, champion, tape id), `Entry` (gladiator, strategy, generation, archetype), `Promotion`. Lineage is a tree through `parent`.
 
-Score semantics: `scoreQuote` is Aquascan's pair-native P&L in the quote token at generation close, economic fills only. The contract stores it as attested by the lanista process; the subgraph does not recompute it.
+Score semantics: `scoreQuote` is the sum of the gladiator's 5-minute markouts in the quote token over the generation, economic fills only, as Aquascan computes it against the route reference (the pool at the block on Base); its standard error travels with it. The contract stores it as attested by the lanista process; the subgraph does not recompute it.
 
 ## 3. Aquascan API - `aquascan/api`
 

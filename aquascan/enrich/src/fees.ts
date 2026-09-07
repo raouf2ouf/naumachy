@@ -1,4 +1,4 @@
-import { DIALECTS } from "./dialects.js";
+import { dialectFor } from "./dialects.js";
 
 // Fee.sol: `uint256 constant BPS = 1e9` means 100%, so a raw fee argument of 10_000 is 0.10 bps.
 export const FEE_BASE = 1e9;
@@ -8,7 +8,7 @@ export interface Instruction { op: number; args: Uint8Array }
 export interface StrategyFees {
   makerFeeBps: number | null;             // basis points (1e-4), the maker's own fee on the token it receives or gives
   makerFeeSide: "in" | "out" | null;
-  makerFeeKind: "flat" | "progressive" | null;
+  makerFeeKind: "flat" | "progressive" | "toxicity" | null;   // toxicity: base rate, widening with one-way flow
   protocolFeeBps: number | null;          // basis points pulled out of the maker's ledger for the protocol
   protocolFeeTo: string | null;           // recipient of a static protocol fee
   protocolFeeKind: "static" | "dynamic" | null;
@@ -35,7 +35,7 @@ const addr = (bytes: Uint8Array) => "0x" + Array.from(bytes, (b) => b.toString(1
 // Reads the fee instructions of a program through its router's dialect. Null when the router is
 // unknown or the program does not walk; a program without fee instructions decodes to all-null fields.
 export function decodeFees(app: string, program: Uint8Array): StrategyFees | null {
-  const dialect = DIALECTS[app.toLowerCase()];
+  const dialect = dialectFor(app);
   if (!dialect) return null;
   const instructions = walkProgram(program);
   if (!instructions) return null;
@@ -46,6 +46,9 @@ export function decodeFees(app: string, program: Uint8Array): StrategyFees | nul
     switch (name) {
       case "FeeFlatIn": case "FeeFlatOut":
         if (fees.makerFeeKind === null && args.length >= 4) { fees.makerFeeBps = toBps(rawBps(args)); fees.makerFeeSide = name.endsWith("In") ? "in" : "out"; fees.makerFeeKind = "flat"; }
+        break;
+      case "ToxicityFee":
+        if (fees.makerFeeKind === null && args.length >= 16) { fees.makerFeeBps = toBps(rawBps(args)); fees.makerFeeSide = "in"; fees.makerFeeKind = "toxicity"; }
         break;
       case "FeeProgressiveIn": case "FeeProgressiveOut":
         if (fees.makerFeeKind === null) { fees.makerFeeSide = name.endsWith("In") ? "in" : "out"; fees.makerFeeKind = "progressive"; }

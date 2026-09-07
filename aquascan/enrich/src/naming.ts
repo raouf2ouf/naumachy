@@ -13,7 +13,8 @@ export function nameTemplate(instructions: string[] | null, parsed = true): Temp
   if (instructions.some((i) => GATES.has(i))) parts.push("gated");
 
   let core = "program"; let kind = "custom";
-  if (has("XYCConcentrateSwap")) { core = "concentrated AMM"; kind = "concentrated"; }
+  if (has("OracleAnchor")) { core = "oracle-anchored AMM"; kind = "anchored"; }
+  else if (has("XYCConcentrateSwap")) { core = "concentrated AMM"; kind = "concentrated"; }
   else if (has("PeggedSwap")) { core = "pegged-swap AMM"; kind = "pegged"; }
   else if (has("TWAPSwap")) { core = "TWAP order"; kind = "twap"; }
   else if (has("LimitSwap") || has("LimitSwapFullAmount")) { core = "limit order"; kind = "limit"; }
@@ -25,6 +26,8 @@ export function nameTemplate(instructions: string[] | null, parsed = true): Temp
 
   const mods: string[] = [];
   if (has("FeeFlatIn") || has("FeeFlatOut")) mods.push("flat fee");
+  if (has("ToxicityFee")) mods.push("toxicity fee");
+  if (has("RiskCap")) mods.push("risk cap");
   if (has("FeeProgressiveIn") || has("FeeProgressiveOut")) mods.push("progressive fee");
   if (has("Decay")) mods.push("decay");
   if (has("DynamicBalances")) mods.push("self re-arming");

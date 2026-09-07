@@ -1,7 +1,8 @@
 // Choosing how a pair is priced. Pure decisions, so they can be tested without a database.
 
-export const TAPE_MIN_PER_HOUR = 10;      // a pair's own prints per hour that make its tape the reference
-export const POOL_MIN_SWAPS_30D = 120;    // the least a pool may trade in 30 days to serve as a reference
+// Thresholds, overridable for a gym whose fork has hours of history rather than months.
+export const TAPE_MIN_PER_HOUR = Number(process.env.TAPE_MIN_PER_HOUR ?? 10);      // a pair's own prints per hour that make its tape the reference
+export const POOL_MIN_SWAPS_30D = Number(process.env.POOL_MIN_SWAPS_30D ?? 120);   // the least a pool may trade in 30 days to serve as a reference
 
 export interface PoolCandidate { id: string; token0: string; token1: string; swaps30d: number; volume30dUsd: number; feeTier: number | null }
 export interface Leg { a: string; b: string; src: "tape" | "pool"; inv: boolean }
