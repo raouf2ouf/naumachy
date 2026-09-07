@@ -28,7 +28,9 @@ export interface Config {
 
 // Published DEX subgraphs with the Uniswap v3 schema (pools, swaps, poolDayData), one per chain,
 // overridable with DEX_SUBGRAPH_ID_<CHAIN>. Chains without one keep hourly references.
-const DEX_DEFAULTS: Partial<Record<ChainName, { protocol: string; subgraphId: string; hubs: Record<string, string> }>> = {
+const DEX_DEFAULTS: Partial<Record<ChainName, { protocol: string; subgraphId: string | null; hubs: Record<string, string> }>> = {
+  base: { protocol: "naumachy-pools", subgraphId: null,   // our own pools subgraph; id or Studio URL in DEX_SUBGRAPH_ID_BASE until published
+    hubs: { WETH: "0x4200000000000000000000000000000000000006", USDC: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", USDBC: "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca", USDT: "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2" } },
   ethereum: { protocol: "uniswap-v3", subgraphId: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
     hubs: { WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7" } },
   bsc: { protocol: "uniswap-v3", subgraphId: "G5MUbSBM7Nsrm9tH2tGQUiAF4SZDGf2qeo1xPLYjKr7K",
@@ -69,7 +71,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, only?: ChainNam
     pageSize: 1000,
     dexes: chains.flatMap((c) => {
       const d = DEX_DEFAULTS[c.name];
-      const id = env[`DEX_SUBGRAPH_ID_${ENV_SUFFIX[c.name]}`] ?? d?.subgraphId;
+      const id = env[`DEX_SUBGRAPH_ID_${ENV_SUFFIX[c.name]}`] ?? d?.subgraphId ?? undefined;
       return id && d ? [{ chain: c.name, protocol: d.protocol, subgraphId: id, hubs: d.hubs }] : [];
     }),
     dexCallsPerMinute: Number(env.DEX_CALLS_PER_MINUTE ?? 120),

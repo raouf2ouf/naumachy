@@ -1,0 +1,40 @@
+# Swaps of a fixed set of Uniswap v3 pools on one chain, in the field names the Uniswap
+# subgraphs use, so Aquascan's pool lane reads either without caring which it is.
+
+type Token @entity(immutable: false) {
+  id: ID!                                  # lowercase address
+  symbol: String!
+  decimals: BigInt!
+}
+
+type Pool @entity(immutable: false) {
+  id: ID!                                  # lowercase pool address
+  token0: Token!
+  token1: Token!
+  feeTier: BigInt!
+  txCount: BigInt!
+  createdAtBlock: BigInt!
+  swaps: [Swap!]! @derivedFrom(field: "pool")
+  poolDayData: [PoolDayData!]! @derivedFrom(field: "pool")
+}
+
+type Swap @entity(immutable: true) {
+  id: ID!                                  # tx hash + log index
+  pool: Pool!
+  timestamp: BigInt!
+  block: BigInt!
+  amount0: BigDecimal!                     # token units, signed as the pool sees them
+  amount1: BigDecimal!
+  sqrtPriceX96: BigInt!
+  tick: BigInt!
+}
+
+type PoolDayData @entity(immutable: false) {
+  id: ID!                                  # pool + day
+  pool: Pool!
+  date: Int!                               # unix day start
+  txCount: BigInt!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!                   # always 0 here: dollars are Aquascan's job, kept for schema parity
+}

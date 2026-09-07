@@ -18,7 +18,8 @@ export class Gateway {
   ) {}
 
   async query<T extends MetaShape>(subgraphId: string, query: string, variables: Record<string, unknown>): Promise<GatewayResult<T>> {
-    const url = `https://gateway.thegraph.com/api/${this.apiKey}/subgraphs/id/${subgraphId}`;
+    // a full URL stands in for a network id: a Studio query endpoint before publish, or a local graph-node
+    const url = subgraphId.startsWith("http") ? subgraphId : `https://gateway.thegraph.com/api/${this.apiKey}/subgraphs/id/${subgraphId}`;
     let attempt = 0;
     for (;;) {
       attempt += 1;

@@ -1067,6 +1067,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@naumachy/subgraph-pools@workspace:subgraphs/pools":
+  version: 0.0.0-use.local
+  resolution: "@naumachy/subgraph-pools@workspace:subgraphs/pools"
+  dependencies:
+    "@graphprotocol/graph-cli": "npm:^0.98.1"
+    "@graphprotocol/graph-ts": "npm:^0.38.2"
+  languageName: unknown
+  linkType: soft
+
 "@noble/curves@npm:1.4.2, @noble/curves@npm:~1.4.0":
   version: 1.4.2
   resolution: "@noble/curves@npm:1.4.2"

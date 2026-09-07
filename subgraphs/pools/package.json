@@ -1,0 +1,16 @@
+{
+  "name": "@naumachy/subgraph-pools",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build --network base --network-file networks.json",
+    "deploy:studio": "graph deploy naumachy-pools-base",
+    "create:local": "graph create --node http://localhost:8020/ naumachy/pools",
+    "deploy:local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 --version-label v0.1.0 naumachy/pools"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1",
+    "@graphprotocol/graph-ts": "^0.38.2"
+  }
+}

@@ -69,6 +69,10 @@ type DailyStrategyStat @entity { id: ID!  # strategyHash-day
 
 Rules baked into the mappings, not into consumers: lowercase ids, the economic flag, template hashing, dialect key by app address. The Substreams package (M6) replaces the template hashing with a real disassembly and adds a `Program` entity with decoded instructions.
 
+### Pools subgraph - `subgraphs/pools`
+
+Swaps of a fixed set of Uniswap v3 pools on Base, entities named as the Uniswap subgraphs name them (`pools`, `swaps`, `poolDayData`) so Aquascan's pool lane reads either. Published on the network as `6k7nx7L8JJu5bCuo6nQdiV7vn1uTxtXsBjUZy7XHzmNQ` (Base, v0.1.0). The same manifest indexes a fork of Base through the local graph-node; the gym scores gladiators against the pool at the block.
+
 ## 2. Arena subgraph - `subgraphs/arena`
 
 Source: `ArenaRegistry` (contracts/src/ArenaRegistry.sol). Runs on the local graph-node for the gym and on The Graph Network for Base.
