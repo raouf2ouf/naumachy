@@ -1,6 +1,6 @@
 export interface Priced { value: number | null; source: string; at: string; confidence: number }
-export type Chain = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon" | "bsc";
-export const CHAINS: Chain[] = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc"];
+export type Chain = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon" | "bsc" | "robinhood";
+export const CHAINS: Chain[] = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "robinhood"];
 
 // Every scored row carries the same set: edge at fill time, markouts at three horizons, the drift
 // (markout minus edge), fees, and the share of its fills referenced on the venue tape.

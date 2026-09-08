@@ -2,7 +2,7 @@ import type pg from "pg";
 import { priced, refSource, windowSeconds, type Priced } from "./provenance.js";
 
 type Pool = pg.Pool;
-const CHAINS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc"];
+const CHAINS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "robinhood"];
 const HOURLY = "defillama hourly";
 const FEE_RATE = "program fee rate applied to volume";
 

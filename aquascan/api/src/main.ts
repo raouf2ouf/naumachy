@@ -10,7 +10,7 @@ const port = Number(process.env.AQUASCAN_API_PORT ?? 3100);
 // its answer only changes when the rollup runs. So it is computed once per rollup per (window,
 // chain) and served from memory; a warmer recomputes the common views right after each rollup,
 // so the first visitor after a rollup does not pay for it either.
-const CHAINS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc"];
+const CHAINS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "robinhood"];
 const overviewCache = new Map<string, { rollup: number; body: unknown }>();
 let lastRollup = 0;
 async function cachedOverview(window: string | null, chain: string | null, rollup?: number): Promise<unknown> {

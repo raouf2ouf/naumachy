@@ -3,7 +3,7 @@ import type { Pool } from "./db.js";
 // Symbols treated as the numeraire when a strategy touches them. Upper case; matched on token symbol.
 export const STABLE_SYMBOLS = [
   "USDC", "USDT", "DAI", "USDS", "USDE", "FRAX", "GHO", "LUSD", "CRVUSD", "PYUSD", "USD1", "USDBC", "USDT0",
-  "FDUSD", "TUSD", "USDP", "BUSD", "SUSD", "USDC.E", "USDT.E", "DAI.E", "EURC", "EURE", "EURS", "AGEUR",
+  "FDUSD", "TUSD", "USDP", "BUSD", "SUSD", "USDC.E", "USDT.E", "DAI.E", "EURC", "EURE", "EURS", "AGEUR", "USDG",
 ];
 // Majors that serve as the quote side of a pair when no stable is involved.
 export const MAJOR_SYMBOLS = ["WETH", "ETH", "WBTC", "CBBTC", "WSTETH", "STETH", "WEETH", "WBNB", "WMATIC", "WPOL"];

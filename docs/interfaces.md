@@ -19,6 +19,7 @@ Start blocks, verified on chain. Canonical = the registry's deployment block (it
 | Optimism (`optimism`) | 154434383 | 154434383 |
 | Polygon (`matic`) | 90508403 | 90508403 |
 | BSC (`bsc`) | 110908635 | 110908635 |
+| Robinhood Chain (`robinhood`, id 4663) | 13888204 | 13888204 (registry never deployed there; the data source stays silent so the shared manifest builds) |
 
 Entities (draft):
 

@@ -1,7 +1,7 @@
 import type { Chain } from "./api";
 
-export const CHAIN_NAME: Record<Chain, string> = { ethereum: "Ethereum", base: "Base", arbitrum: "Arbitrum", optimism: "Optimism", polygon: "Polygon", bsc: "BSC" };
-export const CHAIN_HUE: Record<Chain, string> = { ethereum: "#8ea6ff", base: "#5aa0ff", arbitrum: "#6fd0ff", optimism: "#ff7a6b", polygon: "#b98cff", bsc: "#f0c040" };
+export const CHAIN_NAME: Record<Chain, string> = { ethereum: "Ethereum", base: "Base", arbitrum: "Arbitrum", optimism: "Optimism", polygon: "Polygon", bsc: "BSC", robinhood: "Robinhood" };
+export const CHAIN_HUE: Record<Chain, string> = { ethereum: "#8ea6ff", base: "#5aa0ff", arbitrum: "#6fd0ff", optimism: "#ff7a6b", polygon: "#b98cff", bsc: "#f0c040", robinhood: "#7ee0a0" };
 export const REGISTRY_CANONICAL = "0x1111113ccf1426a8e30e2bff5e005d929bf6a90a";
 
 export function shortAddr(a: string, head = 6, tail = 4): string {

@@ -1,4 +1,4 @@
-export type ChainName = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon" | "bsc";
+export type ChainName = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon" | "bsc" | "robinhood";
 
 export interface ChainConfig {
   name: ChainName;
@@ -44,6 +44,7 @@ const ENV_SUFFIX: Record<ChainName, string> = {
   optimism: "OPTIMISM",
   polygon: "POLYGON",
   bsc: "BSC",
+  robinhood: "ROBINHOOD",
 };
 
 export const CHAIN_NAMES = Object.keys(ENV_SUFFIX) as ChainName[];

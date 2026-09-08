@@ -4,7 +4,7 @@ The Aqua registry on one chain, both registries (canonical and legacy), events `
 
 ## Files
 
-- `subgraph.yaml` is the Base instance. `networks.json` holds addresses and start blocks for all six chains; `graph build --network <name> --network-file networks.json` rewrites the manifest for that chain.
+- `subgraph.yaml` is the Base instance. `networks.json` holds addresses and start blocks for all seven chains (Robinhood Chain has no legacy registry; its legacy entry points at the never-deployed address so graph-cli, which needs every data source, builds); `graph build --network <name> --network-file networks.json` rewrites the manifest for that chain.
 - `abis/Aqua.json` is the event subset of `IAqua` (identical across every Aqua release).
 - `schema.graphql` follows `docs/interfaces.md`.
 - `src/mapping.ts` holds the four handlers.
@@ -43,5 +43,6 @@ Deploying to Studio uploads the build to The Graph's IPFS and starts a test sync
 | Optimism | naumachy-aqua-optimism | `HXpJdfgRerrtWNd6kukwvjY2aJw4atHrHEq8GyJvgFsc` | 2026-09-06, v0.1.1 |
 | Polygon | naumachy-aqua-polygon | `9tLnocqtx2cvfvgtzaAuuQZ6L7ZXD7U2SmtyA9Jpdpfi` | 2026-09-06, v0.1.1 |
 | BSC | naumachy-aqua-bsc | `4gkxx7rs2YiKLWSXMAr1sNpyHauN1CqAUrbRtYawMLnf` | 2026-09-06, v0.1.1 |
+| Robinhood Chain | none | none | Studio refuses the network (the registry lists Firehose and Substreams only, no subgraph service); route open, see docs/decisions.md |
 
 Gateway: `https://gateway.thegraph.com/api/<api-key>/subgraphs/id/<network id>`.

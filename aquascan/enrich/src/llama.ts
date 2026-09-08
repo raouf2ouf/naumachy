@@ -1,7 +1,7 @@
 import type { Paced } from "./pacer.js";
 
 // DefiLlama coins API, batchHistorical: many (coin, timestamp) pairs in one call.
-// Coin ids are "<chain>:<address>"; our chain names match DefiLlama's slugs for all six chains.
+// Coin ids are "<chain>:<address>"; our chain names match DefiLlama's slugs for all seven chains (Robinhood Chain is "robinhood").
 
 export const LLAMA_BASE = "https://coins.llama.fi";
 export const SEARCH_WIDTH = "4h";           // accept a data point within four hours of the asked hour
