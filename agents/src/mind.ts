@@ -25,7 +25,7 @@ export const ProgramSchema = z.object({
   pairs: z.array(z.enum(["WETH/USDC", "cbBTC/USDC", "cbBTC/WETH"])).min(1).max(3),
   capBps: z.number().min(100).max(5000),
   ops: z.array(OpSchema).min(1).max(8),
-  parent: z.string().nullable(),          // the gladiator address whose program this mutates, or null for a fresh line
+  parent: z.string().regex(/^0x[0-9a-fA-F]{40}$/).nullable(),          // the gladiator ADDRESS (20 bytes) whose program this mutates, or null for a fresh line; never a strategy hash
   rationale: z.string(),
 });
 export type Program = z.infer<typeof ProgramSchema>;
@@ -50,7 +50,7 @@ THE FLOW. Every few seconds an uninformed order arrives on a random pair with a 
 
 THE RECORD. The verdict of record is the attested score of each generation, written on chain at close, against that generation's field. Aquascan's desk and leaderboard figures, and the live numbers beside the attested ones, accumulate across generations and fields: a desk that led generation 0 alone says little about a field of four. Programs are public the moment they ship, as on the venue. Minds write in a fixed order each generation: the open generation's entries in your briefing are the rivals who wrote before you this round, and those after you will see yours before they write. Nothing is hidden from anyone; the order is the arena's.
 
-Read the generations so far, your own last program and result, the rivals' programs (public: their bytes are on chain, listed for you) and verdicts, and the pools' recent behaviour. Then write your next program. If you are mutating a rival's program, name it as parent. Say in the rationale what you changed and why, in a few sentences.`;
+Read the generations so far, your own last program and result, the rivals' programs (public: their bytes are on chain, listed for you) and verdicts, and the pools' recent behaviour. Then write your next program. If you are mutating a rival's program, name its gladiator ADDRESS (the 20-byte 0x address, not the 32-byte strategy hash) as parent. Say in the rationale what you changed and why, in a few sentences.`;
 
 export interface Usage { input: number; output: number; cache_read: number; cache_write: number; calls: number }
 export interface Decision { program: Program; transcript: ToolCall[]; mode: "heuristic" | "briefing" | "tools-local" | "tools-mcp"; usage: Usage }
@@ -68,7 +68,14 @@ const MAX_READS = () => Number(process.env.GLADIATOR_MAX_READS ?? 3);
 export async function decide(client: Anthropic, ctx: Context, graph?: GraphSetup, api?: string, problem?: string): Promise<Decision> {
   if (process.env.GLADIATOR_MIND === "heuristic") return { program: heuristic(ctx, problem), transcript: [], mode: "heuristic", usage: emptyUsage() };
   if (process.env.GLADIATOR_TOOLS === "off" || !graph || !api) return briefingOnly(client, ctx, problem);
-  return withTools(client, ctx, graph, api, problem);
+  try { return await withTools(client, ctx, graph, api, problem); }
+  catch (err) {
+    // a transport or request error on the tools path is not a reason to sit the generation out:
+    // the briefing alone still gives an answer, and the generation file says the reads were lost
+    if (!(err instanceof Anthropic.APIError)) throw err;
+    console.log(new Date().toISOString(), `   the tools path failed (${err.status} ${String(err.message).slice(0, 120)}); answering from the briefing alone`);
+    return briefingOnly(client, ctx, problem);
+  }
 }
 
 const effort = () => (process.env.GLADIATOR_EFFORT as "low" | "medium" | "high" | "xhigh" | "max" | undefined) ?? "high";
@@ -101,8 +108,8 @@ async function withTools(client: Anthropic, ctx: Context, graph: GraphSetup, api
   try { program = ProgramSchema.parse(JSON.parse(text)); }
   catch {
     // the loop ended on a tool turn or a stray sentence: one more request, no tools, the answer only
-    const again = await client.beta.messages.create({ model: model(), max_tokens: 4000, output_config: { format: betaZodOutputFormat(ProgramSchema) },
-      system: SYSTEM, messages: [...runner.params.messages, { role: "user", content: "Answer now with your program as JSON, nothing else." }] });
+    const again = await client.beta.messages.create({ model: model(), max_tokens: 8000, thinking: { type: "adaptive" }, output_config: { format: betaZodOutputFormat(ProgramSchema) },
+      system: SYSTEM, messages: [...runner.params.messages, { role: "user", content: "Answer now with your program as JSON, nothing else." }], ...(mcp ? { betas: [SUBGRAPH_MCP.beta] } : {}) });
     addUsage(usage, again);
     program = ProgramSchema.parse(JSON.parse(again.content.filter((b) => b.type === "text").map((b) => b.text).join("")));
   }
