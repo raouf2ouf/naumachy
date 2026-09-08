@@ -2,7 +2,14 @@ export type ChainName = "ethereum" | "base" | "arbitrum" | "optimism" | "polygon
 
 export interface ChainConfig {
   name: ChainName;
-  subgraphId: string;
+  source: "subgraph" | "substreams";
+  subgraphId: string;        // network id or URL of the subgraph; for a Substreams chain, the endpoint
+  startBlock?: number;       // Substreams chains: where the registry starts
+}
+
+export interface SubstreamsConfig {
+  token: string | undefined;   // SUBSTREAMS_API_TOKEN, from `substreams auth` on The Graph Market
+  packagePath: string;         // SUBSTREAMS_PACKAGE: local .spkg or URL of naumachy-aqua
 }
 
 export interface DexConfig {
@@ -20,6 +27,7 @@ export interface Config {
   llamaCallsPerMinute: number;
   llamaCallsPerPass: number;
   rpcByChain: Record<string, string | undefined>;
+  substreams: SubstreamsConfig;
   pollSeconds: number;
   pageSize: number;
   dexes: DexConfig[];
@@ -35,6 +43,13 @@ const DEX_DEFAULTS: Partial<Record<ChainName, { protocol: string; subgraphId: st
     hubs: { WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7" } },
   bsc: { protocol: "uniswap-v3", subgraphId: "G5MUbSBM7Nsrm9tH2tGQUiAF4SZDGf2qeo1xPLYjKr7K",
     hubs: { WBNB: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", USDT: "0x55d398326f99059ff775485246999027b3197955", USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" } },
+};
+
+// Chains The Graph Network reaches only through Firehose: Aquascan reads them with the Substreams
+// package in substreams/aqua, from the canonical registry's deployment block. Enabled by
+// SUBSTREAMS_ENDPOINT_<CHAIN>; a chain with a subgraph id keeps the subgraph.
+const SUBSTREAMS_DEFAULTS: Partial<Record<ChainName, { endpoint: string; startBlock: number }>> = {
+  robinhood: { endpoint: "https://mainnet.robinhood.streamingfast.io:443", startBlock: 13888204 },
 };
 
 const ENV_SUFFIX: Record<ChainName, string> = {
@@ -57,9 +72,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, only?: ChainNam
   for (const name of CHAIN_NAMES) {
     if (only && !only.includes(name)) continue;
     const subgraphId = env[`GRAPH_SUBGRAPH_ID_${ENV_SUFFIX[name]}`];
-    if (subgraphId) chains.push({ name, subgraphId });
+    const endpoint = env[`SUBSTREAMS_ENDPOINT_${ENV_SUFFIX[name]}`];
+    if (subgraphId) chains.push({ name, source: "subgraph", subgraphId });
+    else if (endpoint) {
+      const d = SUBSTREAMS_DEFAULTS[name];
+      chains.push({ name, source: "substreams", subgraphId: endpoint === "default" && d ? d.endpoint : endpoint, startBlock: Number(env[`SUBSTREAMS_START_BLOCK_${ENV_SUFFIX[name]}`] ?? d?.startBlock ?? 0) });
+    }
   }
-  if (chains.length === 0) throw new Error("no GRAPH_SUBGRAPH_ID_<CHAIN> is set");
+  if (chains.length === 0) throw new Error("no GRAPH_SUBGRAPH_ID_<CHAIN> or SUBSTREAMS_ENDPOINT_<CHAIN> is set");
   return {
     apiKey,
     chains,
@@ -68,6 +88,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, only?: ChainNam
     llamaCallsPerMinute: Number(env.LLAMA_CALLS_PER_MINUTE ?? 30),
     llamaCallsPerPass: Number(env.LLAMA_CALLS_PER_PASS ?? 200),
     rpcByChain: Object.fromEntries(CHAIN_NAMES.map((name) => [name, env[`RPC_${ENV_SUFFIX[name]}`]])),
+    substreams: { token: env.SUBSTREAMS_API_TOKEN, packagePath: env.SUBSTREAMS_PACKAGE ?? new URL("../../../substreams/aqua/naumachy-aqua-v0.1.0.spkg", import.meta.url).pathname },
     pollSeconds: Number(env.ENRICH_POLL_SECONDS ?? 300),
     pageSize: 1000,
     dexes: chains.flatMap((c) => {

@@ -11,6 +11,7 @@ import { syncPrices } from "./lanes/prices.js";
 import { syncTokens } from "./lanes/tokens.js";
 import { syncFees } from "./lanes/fees.js";
 import { syncPools } from "./lanes/pools.js";
+import { syncAqua } from "./lanes/aqua.js";
 import { Llama } from "./llama.js";
 import { rollup } from "./rollup.js";
 import { status, formatStatus } from "./status.js";
@@ -58,10 +59,10 @@ async function main() {
   }
 
   for (const c of config.chains) {
-    await pool.query(`INSERT INTO chains (name, subgraph_id) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET subgraph_id = EXCLUDED.subgraph_id`, [c.name, c.subgraphId]);
+    await pool.query(`INSERT INTO chains (name, subgraph_id, source) VALUES ($1, $2, $3) ON CONFLICT (name) DO UPDATE SET subgraph_id = EXCLUDED.subgraph_id, source = EXCLUDED.source`, [c.name, c.subgraphId, c.source]);
   }
   const paced = createPacer(config.gatewayCallsPerMinute);
-  const bySubgraph = new Map(config.chains.map((c) => [c.subgraphId, c.name]));
+  const bySubgraph = new Map(config.chains.filter((c) => c.source === "subgraph").map((c) => [c.subgraphId, c.name]));
   const gateway = new Gateway(config.apiKey, paced, (subgraphId) => {
     const name = bySubgraph.get(subgraphId);
     if (name) void pool.query(`UPDATE chains SET gateway_calls = gateway_calls + 1 WHERE name = $1`, [name]);
@@ -73,6 +74,14 @@ async function main() {
   for (;;) {
     for (const c of config.chains) {
       try {
+        if (c.source === "substreams") {
+          const rpc = config.rpcByChain[c.name];
+          if (!rpc) throw new Error(`RPC_${c.name.toUpperCase()} is needed to read the head of a Substreams chain`);
+          if (!config.substreams.token) throw new Error("SUBSTREAMS_API_TOKEN is not set");
+          const a = await syncAqua(pool, { chain: c.name, endpoint: c.subgraphId, token: config.substreams.token, packagePath: config.substreams.packagePath, startBlock: c.startBlock ?? 0, rpc, budgetSeconds: Number(process.env.SUBSTREAMS_BUDGET_SECONDS ?? 600) });
+          log(`${c.name}: substreams +${a.blocks} blocks, ships ${a.shipped} docks ${a.docked} legs ${a.legs} cursor ${a.cursor} head ${a.head}`);
+          continue;
+        }
         const s = await syncStrategies(pool, gateway, c.name, c.subgraphId, config.pageSize);
         const f = await syncFills(pool, gateway, c.name, c.subgraphId, config.pageSize);
         const t = await syncTemplates(pool, gateway, c.name, c.subgraphId, config.pageSize);

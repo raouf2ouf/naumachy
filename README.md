@@ -19,7 +19,7 @@ A market maker needs three things at once that no single primitive gives it: to 
 ## Parts
 
 - **Rudis**: contracts (a modified SwapVM router with custom opcodes: a toxicity fee, a risk cap, a multi-pair oracle anchor; an arena pass; an arena registry), the gladiators and their compiler, the gym with its two takers (one routed, one anonymous), the live arena, the Ledger gate.
-- **Aquascan**: the explorer and P&L ledger for Aqua strategies. Subgraphs per chain, a Substreams disassembler for SwapVM dialects, an enrichment service for prices and markouts, a web UI with the arena and every program as compiled, and an MCP server so Claude, Cursor and the gladiators can ask it questions.
+- **Aquascan**: the explorer and P&L ledger for Aqua strategies. Subgraphs per chain, a Substreams package for the chain The Graph reaches only through Firehose (Robinhood Chain), an enrichment service for prices and markouts, a web UI with the arena and every program as compiled, and an MCP server so Claude, Cursor and the gladiators can ask it questions.
 
 ## Partner tracks
 

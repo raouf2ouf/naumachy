@@ -18,7 +18,7 @@ Every gate is a checkbox. A task that moves no gate is a task we question.
 ### The Graph ($10,000 across two from-scratch tracks, 3 places each)
 
 Track A, composable or standardized products:
-- [ ] GA.1 Two or more Graph products composed: subgraphs (Aqua per chain, arena), a Substreams package (SwapVM dialect disassembler) feeding a substreams-powered subgraph, and the Subgraph MCP as the agents' query layer.
+- [x] GA.1 Two or more Graph products composed: subgraphs (Aqua per chain, arena) and a Substreams package (`substreams/aqua`, the Aqua registry events for Robinhood Chain, which The Graph reaches only through Firehose) feeding the same explorer, plus the Subgraph MCP as the agents' query layer. Done 2026-09-08.
 - [x] GA.2 Live data from a Graph provider: published on The Graph Network, queried through the gateway with an API key. Studio-only does not count. Done 2026-09-06: six Aqua subgraphs published (ids in `subgraphs/aqua/README.md`), served through the gateway, read by `aquascan/enrich`.
 - [ ] GA.3 Public repo, 2 to 4 minute demo.
 
@@ -94,7 +94,7 @@ Repo, `CLAUDE.md`, plan, lessons, interfaces, decisions, commit queue.
 
 ### M6 - Instruments
 
-- Substreams disassembler package and substreams-powered subgraph (GA.1).
+- Substreams package for the chains Studio does not serve, replayed by the enrichment (GA.1). Done 2026-09-08 for Robinhood Chain.
 - Aquascan MCP server and the analyst (GB.2 for Aquascan).
 - Markouts 1h/24h, taker stats and self-trade flag, labels for the top makers.
 - Overview polish for cognitive load.
@@ -135,7 +135,7 @@ Worst odds: the enrollment hack (fallback exists), minds producing boring knobs 
 
 - The Graph mentor: Base subgraph of our own contracts counts as live data from a Graph provider.
 - The Graph mentor: a network-published subgraph over our own registry, read by the gladiators through the Subgraph MCP, counts as composing two Graph products; and whether a fillable-liquidity lane through the Token API counts as a second composition.
-- The Graph: Substreams support on Base and Ethereum for the disassembler (expected yes).
+- The Graph: a Substreams package read by our own consumer counts as a composed product next to the subgraphs (the package is registry-publishable; publish if they want it visible on substreams.dev).
 - Ledger: Key Ring headless decrypt mechanics on a VPS, from the docs at developers.ledger.com and the Telegram group.
 - 1inch: which router variant sits at the canonical Base address, and the license line for submodules in the README.
 - Chain for the live arena: Base assumed (cheap gas, Aqua deployed, Graph supported). Arbitrum is the alternate.

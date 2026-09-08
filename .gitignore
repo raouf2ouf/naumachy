@@ -29,3 +29,5 @@ infra/data/
 
 # generated per fork block by infra/gym/deploy-subgraphs.sh
 subgraphs/*/networks.gym.json
+substreams/**/*.spkg
+substreams/**/src/abi/aqua.rs

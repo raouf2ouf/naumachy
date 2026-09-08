@@ -22,7 +22,8 @@ Read in order: this file, `docs/plan.md` (gates, milestones), `docs/interfaces.m
 
 ```
 contracts/  Foundry; 1inch aqua + swap-vm submodules; NaumachyRouter (custom opcodes); ArenaRegistry
-subgraphs/  aqua/ per chain, arena/, substreams/ (disassembler)
+subgraphs/  aqua/ per chain, arena/
+substreams/ aqua/: Aqua registry events for chains without subgraph support (Robinhood Chain), Rust, read by the enrichment
 aquascan/   enrich/ api/ web/
 agents/     gladiators: authoring, validator loop, Subgraph MCP client
 arena/      gym/ live/, Key Ring, promotion gate

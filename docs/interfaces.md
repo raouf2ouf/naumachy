@@ -68,7 +68,7 @@ type DailyStrategyStat @entity { id: ID!  # strategyHash-day
   strategy: Strategy!  day: Int!  economicFills: Int!  legs: Int! }
 ```
 
-Rules baked into the mappings, not into consumers: lowercase ids, the economic flag, template hashing, dialect key by app address. The Substreams package (M6) replaces the template hashing with a real disassembly and adds a `Program` entity with decoded instructions.
+Rules baked into the mappings, not into consumers: lowercase ids, the economic flag, template hashing, dialect key by app address. The Substreams package `substreams/aqua` (module `map_events`, output `naumachy.aqua.v1.Events`) carries the raw events for chains Studio does not serve; the enrichment's Substreams lane (`aquascan/enrich/src/lanes/aqua.ts`) applies these same rules, so the tables do not know which road a chain came by. Robinhood Chain (`robinhood`, 4663) is the first such chain.
 
 ### Pools subgraph - `subgraphs/pools`
 

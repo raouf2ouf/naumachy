@@ -14,6 +14,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
+    "@substreams/core": "0.17.0",
+    "@substreams/node": "0.7.2",
     "pg": "^8.13.0"
   },
   "devDependencies": {

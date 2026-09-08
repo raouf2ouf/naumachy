@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package naumachy.aqua.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Every event the 1inch Aqua registries emitted in one block, grouped by kind. Order inside a
+// block is the log ordinal carried on each event.
+message Events {
+  repeated Shipped shipped = 1;
+  repeated Docked docked = 2;
+  repeated Pushed pushed = 3;
+  repeated Pulled pulled = 4;
+}
+
+// Where an event happened. Addresses and hashes are lowercase hex with the 0x prefix.
+message Ref {
+  uint64 block_number = 1;
+  google.protobuf.Timestamp block_time = 2;
+  string tx_hash = 3;
+  string tx_from = 4;    // the account that sent the transaction: the taker on a settlement
+  uint32 log_index = 5;  // position of the log in the block
+  uint64 ordinal = 6;    // total order of the log within the block, across transactions
+  string registry = 7;   // the registry that emitted it, canonical or legacy
+}
+
+// A maker registered a strategy: the blob is what Aqua hashed, program included.
+message Shipped {
+  Ref at = 1;
+  string maker = 2;
+  string app = 3;
+  string strategy_hash = 4;
+  bytes strategy = 5;
+}
+
+// A maker revoked a strategy.
+message Docked {
+  Ref at = 1;
+  string maker = 2;
+  string app = 3;
+  string strategy_hash = 4;
+}
+
+// Tokens moved into a strategy's virtual balance. Amounts are decimal strings in raw units.
+message Pushed {
+  Ref at = 1;
+  string maker = 2;
+  string app = 3;
+  string strategy_hash = 4;
+  string token = 5;
+  string amount = 6;
+}
+
+// Tokens moved out of a strategy's virtual balance.
+message Pulled {
+  Ref at = 1;
+  string maker = 2;
+  string app = 3;
+  string strategy_hash = 4;
+  string token = 5;
+  string amount = 6;
+}

@@ -14,3 +14,5 @@ First time: `bootstrap.sh` as root (packages, service user, firewall, node), clo
 Every time: `deploy.sh` as root pulls main, installs, builds the web, publishes it, reinstalls the Caddyfile and the units, restarts the services.
 
 Set up 2026-09-08: 517,942 fills and 129,136 strategies restored from a 601 MB dump; the loop resumed from the Mac's cursor.
+
+Robinhood Chain comes through Substreams, not a subgraph: `.env` carries `SUBSTREAMS_API_TOKEN` (from `substreams auth` on The Graph Market), `SUBSTREAMS_ENDPOINT_ROBINHOOD=default`, `RPC_ROBINHOOD`, and `SUBSTREAMS_PACKAGE` pointing at a copy of the built package, `scp`'d to `/home/naumachy/substreams/` since the box has no Rust toolchain. A first read spans 44M blocks and takes hours in `SUBSTREAMS_BUDGET_SECONDS` slices; the status page shows the cursor advancing.

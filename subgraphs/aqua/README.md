@@ -43,6 +43,6 @@ Deploying to Studio uploads the build to The Graph's IPFS and starts a test sync
 | Optimism | naumachy-aqua-optimism | `HXpJdfgRerrtWNd6kukwvjY2aJw4atHrHEq8GyJvgFsc` | 2026-09-06, v0.1.1 |
 | Polygon | naumachy-aqua-polygon | `9tLnocqtx2cvfvgtzaAuuQZ6L7ZXD7U2SmtyA9Jpdpfi` | 2026-09-06, v0.1.1 |
 | BSC | naumachy-aqua-bsc | `4gkxx7rs2YiKLWSXMAr1sNpyHauN1CqAUrbRtYawMLnf` | 2026-09-06, v0.1.1 |
-| Robinhood Chain | none | none | Studio refuses the network (the registry lists Firehose and Substreams only, no subgraph service); route open, see docs/decisions.md |
+| Robinhood Chain | none | none | Studio refuses the network (Firehose and Substreams only); read through `substreams/aqua` instead |
 
 Gateway: `https://gateway.thegraph.com/api/<api-key>/subgraphs/id/<network id>`.
