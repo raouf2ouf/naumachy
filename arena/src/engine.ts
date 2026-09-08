@@ -4,7 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig, REPO_ROOT, type Config } from "./config.js";
 import { erc20Abi, oracleAbi, routerAbi, swapRouter02Abi, takerAbi, takerDataAbi } from "./abi.js";
 import { liveGladiators, quotesPair, type Gladiator } from "./orders.js";
-import { loadTape } from "./tape.js";
+import { futurePrice, loadTape } from "./tape.js";
 import type { Pair, Token } from "./program.js";
 
 const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
@@ -13,11 +13,11 @@ interface TakerRt { name: "pass" | "raider"; address: Address; td: Hex }
 
 // The taker engine: the arena's flow, on every pair the arena trades. Every tick it replays the
 // next swaps of the tape through the gym's pools, then looks at every live gladiator on every pair
-// it ships: an informed take when a quote beats the pool by more than the edge threshold (the
-// arbitrage that bleeds mainnet desks), and, at random, one uninformed order that shops: it
+// it ships: an arbitrage take when a quote beats the pool by more than the edge threshold, and, at
+// random, one uninformed order that shops: it
 // quotes every gladiator at its size and goes to the best one if that beats the pool, or if it is
 // within the taker's own tolerance of the pool's mid (a lazy taker who does not route); otherwise
-// it trades the pool. Orders arrive through one of two takers: one holds an arena pass (routed
+// it trades the pool. The informed taker reads the tape ahead and trades a coming move first. Orders arrive through one of two takers: one holds an arena pass (routed
 // flow), the other is anonymous (the raider). A gladiator that gates on the pass never sees the
 // raider, and never sees the share of the flow that comes without one. Fills go through the Taker
 // contracts, so Aqua's ledger, the subgraph and Aquascan see them like any other fill.
@@ -45,7 +45,7 @@ async function main() {
     if (allowance === 0n) await wallet.writeContract({ address: t.address, abi: erc20Abi, functionName: "approve", args: [cfg.swapRouter02, 2n ** 255n] });
   }
   const tape = await loadTape(cfg, forkTs);
-  log(`engine ${account.address} | pairs ${market.pairs.map((p) => p.name).join(", ")} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps | tolerance ${cfg.toleranceBps} bps | pass share flow ${cfg.flowPassShare} informed ${cfg.informedPassShare}`);
+  log(`engine ${account.address} | pairs ${market.pairs.map((p) => p.name).join(", ")} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps | tolerance ${cfg.toleranceBps} bps | informed: ${cfg.informedMoveBps} bps move ${cfg.informedHorizonS} s ahead, p=${cfg.informedProbability}, $${cfg.informedUsd} | pass share flow ${cfg.flowPassShare} informed ${cfg.informedPassShare}`);
 
   // prices: quote per base, 18 decimals, per pair; USD through the pair with USDC
   const price = (pair: Pair) => pub.readContract({ address: pair.oracle, abi: oracleAbi, functionName: "latestAnswer" });
@@ -73,24 +73,38 @@ async function main() {
   try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
   for (;;) {
     const elapsed = (Date.now() - started) / 1000;
-    // the tape: swaps due by now, at Base's own pace. Informed flow is the tape read one step ahead:
-    // before a swap large enough to move a pool replays, the taker sells the same token to the
-    // gladiators at the old price, which is what an arbitrageur who sees the order flow does.
+    // the tape: swaps due by now, at Base's own pace, replayed through the pools
     while (tapeIndex < tape.length && tape[tapeIndex].at <= elapsed) {
       const s = tape[tapeIndex++];
-      const usdSize = await usdValue(s.tokenIn, s.amountIn);
-      if (usdSize >= cfg.informedMinUsd) {
-        const amt = await amountForUsd(s.tokenIn, Math.min(usdSize / 4, cfg.probeUsd * 2));   // a slice of it, inside the caps
-        for (const g of gladiators) {
-          if (!quotesPair(g, s.tokenIn, s.tokenOut)) continue;
-          const took = await take(wallet, cfg, g, s.tokenIn, s.tokenOut, amt, pick(cfg.informedPassShare), `informed: sells ${sym(s.tokenIn)} ahead of the tape`, fmt);
-          if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | tape ${tapeIndex}/${tape.length}`); }
-        }
-      }
       try { await poolSwap(s.pair, s.tokenIn, s.tokenOut, s.amountIn); } catch (err) { log(`tape swap failed on ${s.pair.name}: ${String(err).slice(0, 120)}`); }
     }
-    // a silent tape still needs moving pools: random swaps through them, so prints exist and prices wobble
-    if (tape.length === 0 && Math.random() < cfg.poolNoiseProbability) {
+    // informed flow: the taker reads the tape ahead. When a pair's price INFORMED_HORIZON_S from now
+    // differs from the pool's price now by INFORMED_MOVE_BPS or more, it trades that direction against
+    // every gladiator on the pair first, with INFORMED_PROBABILITY per tick. The fill is marked five
+    // minutes later at the moved price: this is the arbitrageur who sees the order flow, and the flow
+    // that bleeds the mainnet desks.
+    for (const pair of market.pairs) {
+      if (Math.random() >= cfg.informedProbability) continue;
+      const ahead = futurePrice(tape, pair, elapsed, cfg.informedHorizonS); if (ahead === null) continue;
+      const now = Number(formatUnits(await price(pair), 18));
+      const moveBps = (ahead / now - 1) * 1e4;
+      if (Math.abs(moveBps) < cfg.informedMoveBps) continue;
+      const baseUp = moveBps > 0;   // token1 per token0 rises: the base gets dearer, so buy it now
+      const tokenIn = baseUp ? pair.oracleQuote.address : pair.oracleBase.address; const tokenOut = baseUp ? pair.oracleBase.address : pair.oracleQuote.address;
+      const amt = await amountForUsd(tokenIn, cfg.informedUsd);
+      const taker = pick(cfg.informedPassShare);
+      // in the pair's conventional reading: "cbBTC/USDC" moves as cbBTC, whichever token the pool calls token0
+      const [asset] = pair.name.split("/"); const assetUp = asset === sym(pair.oracleBase.address) ? baseUp : !baseUp;
+      const assetMove = assetUp ? Math.abs(moveBps) : -Math.abs(moveBps);
+      for (const g of gladiators) {
+        if (!quotesPair(g, tokenIn, tokenOut)) continue;
+        if ((await quote(pub, cfg, g, tokenIn, tokenOut, amt, taker)) === null) continue;   // a gate, a cap: the quote says no before any transaction
+        const took = await take(wallet, cfg, g, tokenIn, tokenOut, amt, taker, `informed: ${assetUp ? "buys" : "sells"} ${asset} ahead of a ${assetMove.toFixed(1)} bps move`, fmt);
+        if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | ${pair.name} | fills ${fills} (informed ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+      }
+    }
+    // a silent or exhausted tape still needs moving pools: random swaps through them, so prints exist and prices wobble
+    if (tapeIndex >= tape.length && Math.random() < cfg.poolNoiseProbability) {
       const pair = market.pairs[Math.floor(Math.random() * market.pairs.length)];
       const sellBase = Math.random() < 0.5; const usd = Math.max(50, Math.round(Math.random() * cfg.poolNoiseUsd));
       const tokenIn = sellBase ? pair.oracleBase.address : pair.oracleQuote.address; const tokenOut = sellBase ? pair.oracleQuote.address : pair.oracleBase.address;

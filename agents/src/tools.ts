@@ -54,7 +54,7 @@ export function makeTools(setup: GraphSetup, api: string, transcript: ToolCall[]
   });
   const aquascan = betaZodTool({
     name: "aquascan",
-    description: "Read the gym's Aquascan API, the scorer. Paths: 'overview?chain=base', 'desks?chain=base&sort=markout', 'leaderboard?chain=base', 'desk/base/<deskId>', 'strategy/base/<maker><router><strategyHash>?limit=20' (fills with their 5-minute markouts), 'search?q=<text>'. Numbers carry their source; the 5-minute markout in bps with its standard error is the score.",
+    description: "Read the gym's Aquascan API, the scorer. Paths: 'overview?chain=base', 'desks?chain=base&sort=markout', 'leaderboard?chain=base', 'desk/base/<deskId>', 'strategy/base/<maker><router><strategyHash>?limit=20' (fills with their 5-minute markouts), 'search?q=<text>'. Numbers carry their source; the 5-minute markout in bps with its standard error is the score. Desk and leaderboard figures accumulate across generations and fields; the attested per-generation score in your briefing is the record.",
     inputSchema: z.object({ path: z.string().min(1).max(300) }),
     run: ({ path }) => record("aquascan", { path }, async () => {
       if (!/^(overview|series|desks|leaderboard|desk\/[a-z]+\/[^/?]+|strategy\/[a-z]+\/[^/?]+|search)(\?[^\s]*)?$/.test(path)) return "error: path not allowed";

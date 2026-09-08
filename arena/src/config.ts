@@ -19,7 +19,7 @@ export interface Config {
   probeUsd: number; noiseUsd: number; noiseProbability: number; edgeBps: number;
   toleranceBps: number; poolFeeBps: number;   // uninformed takers: mean tolerance to a worse-than-pool price (exponential, bps); the pool fee a routed taker pays
   poolNoiseProbability: number; poolNoiseUsd: number;   // random swaps through the pools when the tape is silent
-  informedMinUsd: number;                               // a tape swap at least this large is front-run against the gladiators
+  informedMoveBps: number; informedProbability: number; informedUsd: number; informedHorizonS: number;   // the informed taker: acts on a coming move of at least this many bps, with this probability per tick and pair, at this size, reading the tape this far ahead
   flowPassShare: number; informedPassShare: number;     // share of uninformed / informed orders that arrive through the taker holding an arena pass
   market: Market;
 }
@@ -51,7 +51,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     edgeBps: Number(env.EDGE_BPS ?? 5),
     toleranceBps: Number(env.TOLERANCE_BPS ?? 10), poolFeeBps: Number(env.POOL_FEE_BPS ?? 5),
     poolNoiseProbability: Number(env.POOL_NOISE_PROBABILITY ?? 0.2), poolNoiseUsd: Number(env.POOL_NOISE_USD ?? 3000),
-    informedMinUsd: Number(env.INFORMED_MIN_USD ?? 20_000),
+    informedMoveBps: Number(env.INFORMED_MOVE_BPS ?? 5), informedProbability: Number(env.INFORMED_PROBABILITY ?? 0.03), informedUsd: Number(env.INFORMED_USD ?? 100), informedHorizonS: Number(env.INFORMED_HORIZON_S ?? 300),
     flowPassShare: Number(env.FLOW_PASS_SHARE ?? 0.6), informedPassShare: Number(env.INFORMED_PASS_SHARE ?? 0.2),
     market: { tokens: [weth, usdc, cbbtc], pairs, pass: a.pass ?? "0x0000000000000000000000000000000000000000" },
   };
