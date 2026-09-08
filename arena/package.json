@@ -6,14 +6,16 @@
   "scripts": {
     "engine": "node --env-file=../.env --import tsx src/engine.ts",
     "typecheck": "tsc --noEmit",
-    "generation": "node --env-file=../.env --import tsx src/generation.ts"
+    "generation": "node --env-file=../.env --import tsx src/generation.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "viem": "^2.37.0"
   },
   "devDependencies": {
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^3.0.0"
   },
   "exports": {
     "./*": "./src/*.ts"

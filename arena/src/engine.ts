@@ -1,21 +1,26 @@
 import { readFileSync } from "node:fs";
 import { createPublicClient, createWalletClient, http, formatUnits, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { loadConfig, REPO_ROOT } from "./config.js";
+import { loadConfig, REPO_ROOT, type Config } from "./config.js";
 import { erc20Abi, oracleAbi, routerAbi, swapRouter02Abi, takerAbi, takerDataAbi } from "./abi.js";
-import { liveGladiators, type Gladiator } from "./orders.js";
+import { liveGladiators, quotesPair, type Gladiator } from "./orders.js";
 import { loadTape } from "./tape.js";
+import type { Pair, Token } from "./program.js";
 
 const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
 
-// The taker engine: the arena's flow. Every tick it replays the next swaps of the tape through the
-// gym's pool, then looks at every live gladiator: an informed take when a quote beats the pool by
-// more than the edge threshold (the arbitrage that bleeds mainnet desks), and, at random, one
-// uninformed order that shops: it quotes every gladiator at its size and goes to the best one if
-// that beats the pool, or if it is within the taker's own tolerance of the pool's mid (a lazy
-// taker who does not route); otherwise it trades the pool. Gladiators compete on price for every
-// order, the way 1inch's resolvers route on mainnet. Fills go through the Taker contract, so
-// Aqua's ledger, the subgraph and Aquascan see them like any other fill.
+interface TakerRt { name: "pass" | "raider"; address: Address; td: Hex }
+
+// The taker engine: the arena's flow, on every pair the arena trades. Every tick it replays the
+// next swaps of the tape through the gym's pools, then looks at every live gladiator on every pair
+// it ships: an informed take when a quote beats the pool by more than the edge threshold (the
+// arbitrage that bleeds mainnet desks), and, at random, one uninformed order that shops: it
+// quotes every gladiator at its size and goes to the best one if that beats the pool, or if it is
+// within the taker's own tolerance of the pool's mid (a lazy taker who does not route); otherwise
+// it trades the pool. Orders arrive through one of two takers: one holds an arena pass (routed
+// flow), the other is anonymous (the raider). A gladiator that gates on the pass never sees the
+// raider, and never sees the share of the flow that comes without one. Fills go through the Taker
+// contracts, so Aqua's ledger, the subgraph and Aquascan see them like any other fill.
 async function main() {
   const cfg = loadConfig();
   const account = privateKeyToAccount(cfg.engineKey);
@@ -24,15 +29,44 @@ async function main() {
   const wallet = createWalletClient({ chain, transport: http(cfg.rpc), account });
   const forkBlock = BigInt(readFileSync(process.env.GYM_FORK_BLOCK_FILE ?? REPO_ROOT + "infra/data/gym/fork-block", "utf8").trim());
   const forkTs = Number((await pub.getBlock({ blockNumber: forkBlock })).timestamp);
-  const takerData = { in: await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.taker, true] }) };
+  const takers: Record<"pass" | "raider", TakerRt> = {
+    pass: { name: "pass", address: cfg.taker, td: await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.taker, true] }) },
+    raider: { name: "raider", address: cfg.raider, td: await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.raider, true] }) },
+  };
+  const pick = (passShare: number): TakerRt => (Math.random() < passShare ? takers.pass : takers.raider);
+  const { market } = cfg;
+  const sym = (a: Address) => market.tokens.find((t) => t.address.toLowerCase() === a.toLowerCase())?.symbol ?? a.slice(0, 8);
+  const token = (a: Address): Token => market.tokens.find((t) => t.address.toLowerCase() === a.toLowerCase())!;
+  const fmt = (a: Address, amount: bigint) => `${Number(formatUnits(amount, token(a).decimals)).toFixed(token(a).decimals === 6 ? 2 : 5)} ${sym(a)}`;
 
   // approvals for the tape replay through the Uniswap router
-  for (const token of [cfg.weth, cfg.usdc]) {
-    const allowance = await pub.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [account.address, cfg.swapRouter02] });
-    if (allowance === 0n) await wallet.writeContract({ address: token, abi: erc20Abi, functionName: "approve", args: [cfg.swapRouter02, 2n ** 255n] });
+  for (const t of market.tokens) {
+    const allowance = await pub.readContract({ address: t.address, abi: erc20Abi, functionName: "allowance", args: [account.address, cfg.swapRouter02] });
+    if (allowance === 0n) await wallet.writeContract({ address: t.address, abi: erc20Abi, functionName: "approve", args: [cfg.swapRouter02, 2n ** 255n] });
   }
   const tape = await loadTape(cfg, forkTs);
-  log(`engine ${account.address} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps`);
+  log(`engine ${account.address} | pairs ${market.pairs.map((p) => p.name).join(", ")} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps | tolerance ${cfg.toleranceBps} bps | pass share flow ${cfg.flowPassShare} informed ${cfg.informedPassShare}`);
+
+  // prices: quote per base, 18 decimals, per pair; USD through the pair with USDC
+  const price = (pair: Pair) => pub.readContract({ address: pair.oracle, abi: oracleAbi, functionName: "latestAnswer" });
+  const fairOut = (pair: Pair, p: bigint, tokenIn: Address, amountIn: bigint): bigint => {
+    const bd = BigInt(pair.oracleBase.decimals); const qd = BigInt(pair.oracleQuote.decimals);
+    return tokenIn.toLowerCase() === pair.oracleBase.address.toLowerCase()
+      ? amountIn * p * 10n ** qd / 10n ** (18n + bd)
+      : amountIn * 10n ** (18n + bd) / (p * 10n ** qd);
+  };
+  const usdPair = (a: Address): Pair | null => a.toLowerCase() === cfg.usdc.toLowerCase() ? null : market.pairs.find((p) => [p.oracleBase.address, p.oracleQuote.address].map((x) => x.toLowerCase()).includes(a.toLowerCase()) && [p.oracleBase.address, p.oracleQuote.address].map((x) => x.toLowerCase()).includes(cfg.usdc.toLowerCase())) ?? null;
+  const usdValue = async (a: Address, amount: bigint): Promise<number> => {
+    const p = usdPair(a); if (!p) return Number(formatUnits(amount, 6));
+    return Number(formatUnits(fairOut(p, await price(p), a, amount), 6));
+  };
+  const amountForUsd = async (a: Address, usd: number): Promise<bigint> => {
+    const p = usdPair(a); const usdc = BigInt(Math.round(usd * 1e6)); if (!p) return usdc;
+    return fairOut(p, await price(p), cfg.usdc, usdc);
+  };
+  const poolSwap = async (pair: Pair, tokenIn: Address, tokenOut: Address, amountIn: bigint) =>
+    wallet.writeContract({ address: cfg.swapRouter02, abi: swapRouter02Abi, functionName: "exactInputSingle",
+      args: [{ tokenIn, tokenOut, fee: pair.feeTier, recipient: account.address, amountIn, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
 
   let gladiators: Gladiator[] = []; let tapeIndex = 0; const started = Date.now();
   let fills = 0; let arbs = 0; let tick = 0;
@@ -40,99 +74,103 @@ async function main() {
   for (;;) {
     const elapsed = (Date.now() - started) / 1000;
     // the tape: swaps due by now, at Base's own pace. Informed flow is the tape read one step ahead:
-    // before a swap large enough to move the pool replays, the taker trades the gladiators in that
-    // direction at the old price, which is what an arbitrageur who sees the order flow does.
+    // before a swap large enough to move a pool replays, the taker sells the same token to the
+    // gladiators at the old price, which is what an arbitrageur who sees the order flow does.
     while (tapeIndex < tape.length && tape[tapeIndex].at <= elapsed) {
       const s = tape[tapeIndex++];
-      const priceNow = await pub.readContract({ address: cfg.oracle, abi: oracleAbi, functionName: "latestAnswer" });
-      const usdSize = s.sellWeth ? Number(formatUnits(s.amountIn * priceNow / 10n ** 18n, 18)) : Number(formatUnits(s.amountIn, 6));
+      const usdSize = await usdValue(s.tokenIn, s.amountIn);
       if (usdSize >= cfg.informedMinUsd) {
-        const amt = BigInt(Math.round(Math.min(usdSize / 4, cfg.probeUsd * 2) * 1e6));   // a slice of it, inside the caps
+        const amt = await amountForUsd(s.tokenIn, Math.min(usdSize / 4, cfg.probeUsd * 2));   // a slice of it, inside the caps
         for (const g of gladiators) {
-          const took = s.sellWeth
-            ? await take(wallet, cfg, g, cfg.weth, cfg.usdc, amt * 10n ** 30n / priceNow, takerData.in, "informed: sells WETH ahead of the tape")
-            : await take(wallet, cfg, g, cfg.usdc, cfg.weth, amt, takerData.in, "informed: buys WETH ahead of the tape");
+          if (!quotesPair(g, s.tokenIn, s.tokenOut)) continue;
+          const took = await take(wallet, cfg, g, s.tokenIn, s.tokenOut, amt, pick(cfg.informedPassShare), `informed: sells ${sym(s.tokenIn)} ahead of the tape`, fmt);
           if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | tape ${tapeIndex}/${tape.length}`); }
         }
       }
-      try {
-        await wallet.writeContract({ address: cfg.swapRouter02, abi: swapRouter02Abi, functionName: "exactInputSingle",
-          args: [{ tokenIn: s.sellWeth ? cfg.weth : cfg.usdc, tokenOut: s.sellWeth ? cfg.usdc : cfg.weth, fee: 500, recipient: account.address, amountIn: s.amountIn, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
-      } catch (err) { log(`tape swap failed: ${String(err).slice(0, 120)}`); }
+      try { await poolSwap(s.pair, s.tokenIn, s.tokenOut, s.amountIn); } catch (err) { log(`tape swap failed on ${s.pair.name}: ${String(err).slice(0, 120)}`); }
     }
-    // a silent tape still needs a moving pool: random swaps through it, so prints exist and the price wobbles
+    // a silent tape still needs moving pools: random swaps through them, so prints exist and prices wobble
     if (tape.length === 0 && Math.random() < cfg.poolNoiseProbability) {
-      const sellWeth = Math.random() < 0.5; const usd = Math.max(50, Math.round(Math.random() * cfg.poolNoiseUsd));
-      const price0 = await pub.readContract({ address: cfg.oracle, abi: oracleAbi, functionName: "latestAnswer" });
-      const amountIn = sellWeth ? BigInt(usd) * 10n ** 36n / price0 : BigInt(usd) * 10n ** 6n;
-      try {
-        await wallet.writeContract({ address: cfg.swapRouter02, abi: swapRouter02Abi, functionName: "exactInputSingle",
-          args: [{ tokenIn: sellWeth ? cfg.weth : cfg.usdc, tokenOut: sellWeth ? cfg.usdc : cfg.weth, fee: 500, recipient: account.address, amountIn, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
-      } catch (err) { log(`pool noise failed: ${String(err).slice(0, 120)}`); }
+      const pair = market.pairs[Math.floor(Math.random() * market.pairs.length)];
+      const sellBase = Math.random() < 0.5; const usd = Math.max(50, Math.round(Math.random() * cfg.poolNoiseUsd));
+      const tokenIn = sellBase ? pair.oracleBase.address : pair.oracleQuote.address; const tokenOut = sellBase ? pair.oracleQuote.address : pair.oracleBase.address;
+      try { await poolSwap(pair, tokenIn, tokenOut, await amountForUsd(tokenIn, usd)); } catch (err) { log(`pool noise failed on ${pair.name}: ${String(err).slice(0, 120)}`); }
     }
     tick += 1;
     if (tick % 15 === 1 || gladiators.length === 0) {     // every 15 ticks, about half a minute, the roster is re-read
       try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
     }
-    const price = await pub.readContract({ address: cfg.oracle, abi: oracleAbi, functionName: "latestAnswer" });   // USDC per WETH, 1e18
-    for (const g of gladiators) {
-      const probeUsdc = BigInt(Math.round(cfg.probeUsd * 1e6));
-      const probeWeth = probeUsdc * 10n ** 30n / price;                                   // the same value in WETH
-      // informed: does the gladiator sell WETH cheaper, or buy WETH dearer, than the pool by more than the edge?
-      const buyWeth = await quote(pub, cfg, g, cfg.usdc, cfg.weth, probeUsdc, takerData.in);
-      const sellWeth = await quote(pub, cfg, g, cfg.weth, cfg.usdc, probeWeth, takerData.in);
-      const fairWeth = probeUsdc * 10n ** 30n / price; const fairUsdc = probeWeth * price / 10n ** 30n;
-      const edge = BigInt(Math.round(cfg.edgeBps * 1e5));                                  // 1e9 base
-      let took: string | null = null;
-      if (buyWeth !== null && buyWeth > fairWeth * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, cfg.usdc, cfg.weth, probeUsdc, takerData.in, "arb: buys WETH below the pool");
-      else if (sellWeth !== null && sellWeth > fairUsdc * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, cfg.weth, cfg.usdc, probeWeth, takerData.in, "arb: sells WETH above the pool");
-      if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | pool ${formatUnits(price, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+    // arbitrage: on every pair, does a gladiator sell the base cheaper, or buy it dearer, than the pool by more than the edge?
+    const edge = BigInt(Math.round(cfg.edgeBps * 1e5));                                  // 1e9 base
+    for (const pair of market.pairs) {
+      const onPair = gladiators.filter((g) => quotesPair(g, pair.oracleBase.address, pair.oracleQuote.address));
+      if (!onPair.length) continue;
+      const p = await price(pair);
+      const base = pair.oracleBase.address; const quote_ = pair.oracleQuote.address;
+      const probeQuote = await amountForUsd(quote_, cfg.probeUsd); const probeBase = await amountForUsd(base, cfg.probeUsd);
+      const fairBase = fairOut(pair, p, quote_, probeQuote); const fairQuote = fairOut(pair, p, base, probeBase);
+      for (const g of onPair) {
+        const taker = pick(cfg.informedPassShare);
+        const buyBase = await quote(pub, cfg, g, quote_, base, probeQuote, taker);
+        const sellBase = await quote(pub, cfg, g, base, quote_, probeBase, taker);
+        let took: string | null = null;
+        if (buyBase !== null && buyBase > fairBase * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, quote_, base, probeQuote, taker, `arb: buys ${sym(base)} below the pool`, fmt);
+        else if (sellBase !== null && sellBase > fairQuote * (1_000_000_000n + edge) / 1_000_000_000n) took = await take(wallet, cfg, g, base, quote_, probeBase, taker, `arb: sells ${sym(base)} above the pool`, fmt);
+        if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | ${pair.name} ${formatUnits(p, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+      }
     }
-    // the uninformed order: a direction, a size, a tolerance drawn from an exponential with mean
-    // TOLERANCE_BPS (most takers route and accept only a quote that beats the pool; a few do not
-    // look). Every gladiator is quoted at the order's size; the best quote wins the order if it
-    // beats the pool after the pool's fee, or if it is within the tolerance; otherwise the pool gets it.
+    // the uninformed order: a pair, a direction, a size, a tolerance drawn from an exponential with
+    // mean TOLERANCE_BPS (most takers route and accept only a quote that beats the pool; a few do not
+    // look), and a taker: with a pass or anonymous. Every gladiator on the pair is quoted at the
+    // order's size as that taker; the best quote wins the order if it beats the pool after the pool's
+    // fee, or if it is within the tolerance; otherwise the pool gets it.
     if (gladiators.length > 0 && Math.random() < cfg.noiseProbability) {
-      const buyWeth = Math.random() < 0.5; const usd = Math.max(1, Math.round(Math.random() * cfg.noiseUsd));
+      const pair = market.pairs[Math.floor(Math.random() * market.pairs.length)];
+      const buyBase = Math.random() < 0.5; const usd = Math.max(1, Math.round(Math.random() * cfg.noiseUsd));
+      const tokenIn = buyBase ? pair.oracleQuote.address : pair.oracleBase.address; const tokenOut = buyBase ? pair.oracleBase.address : pair.oracleQuote.address;
       const tolBps = -Math.log(1 - Math.random()) * cfg.toleranceBps;
-      const amt = buyWeth ? BigInt(usd * 1e6) : BigInt(usd * 1e6) * 10n ** 30n / price;
-      const fairOut = buyWeth ? amt * 10n ** 30n / price : amt * price / 10n ** 30n;
-      const poolOut = fairOut * BigInt(1_000_000 - cfg.poolFeeBps * 100) / 1_000_000n;
-      const floorOut = fairOut * BigInt(Math.max(0, Math.round(1_000_000 - tolBps * 100))) / 1_000_000n;
+      const taker = pick(cfg.flowPassShare);
+      const p = await price(pair);
+      const amt = await amountForUsd(tokenIn, usd);
+      const fairAmt = fairOut(pair, p, tokenIn, amt);
+      const poolOut = fairAmt * BigInt(1_000_000 - cfg.poolFeeBps * 100) / 1_000_000n;
+      const floorOut = fairAmt * BigInt(Math.max(0, Math.round(1_000_000 - tolBps * 100))) / 1_000_000n;
       let best: { g: Gladiator; out: bigint } | null = null;
       for (const g of gladiators) {
-        const out = await quote(pub, cfg, g, buyWeth ? cfg.usdc : cfg.weth, buyWeth ? cfg.weth : cfg.usdc, amt, takerData.in);
+        if (!quotesPair(g, tokenIn, tokenOut)) continue;
+        const out = await quote(pub, cfg, g, tokenIn, tokenOut, amt, taker);
         if (out !== null && (best === null || out > best.out)) best = { g, out };
       }
-      const label = buyWeth ? "buys WETH" : "sells WETH";
+      const label = `${buyBase ? "buys" : "sells"} ${sym(pair.oracleBase.address)} for ${sym(pair.oracleQuote.address)}`;
       if (best && (best.out >= poolOut || best.out >= floorOut)) {
         const why = best.out >= poolOut ? "flow: best quote beat the pool" : `flow: within ${tolBps.toFixed(1)} bps`;
-        const took = await take(wallet, cfg, best.g, buyWeth ? cfg.usdc : cfg.weth, buyWeth ? cfg.weth : cfg.usdc, amt, takerData.in, `${why}, ${label}`);
-        if (took) { fills += 1; log(`${best.g.maker.slice(0, 10)} ${took} | pool ${formatUnits(price, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+        const took = await take(wallet, cfg, best.g, tokenIn, tokenOut, amt, taker, `${why}, ${label}`, fmt);
+        if (took) { fills += 1; log(`${best.g.maker.slice(0, 10)} ${took} | ${pair.name} ${formatUnits(p, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
       } else {
         try {
-          await wallet.writeContract({ address: cfg.swapRouter02, abi: swapRouter02Abi, functionName: "exactInputSingle",
-            args: [{ tokenIn: buyWeth ? cfg.usdc : cfg.weth, tokenOut: buyWeth ? cfg.weth : cfg.usdc, fee: 500, recipient: account.address, amountIn: amt, amountOutMinimum: 0n, sqrtPriceLimitX96: 0n }] });
-          log(`pool       flow: ${label} $${usd} at the pool, best gladiator ${best ? ((Number(best.out) / Number(fairOut) - 1) * 1e4).toFixed(1) + " bps from mid" : "none"}, tolerance ${tolBps.toFixed(1)} bps`);
-        } catch (err) { log(`pool order failed: ${String(err).slice(0, 120)}`); }
+          await poolSwap(pair, tokenIn, tokenOut, amt);
+          log(`pool       flow (${taker.name}): ${label} $${usd} at the pool, best gladiator ${best ? ((Number(best.out) / Number(fairAmt) - 1) * 1e4).toFixed(1) + " bps from mid" : "none"}, tolerance ${tolBps.toFixed(1)} bps`);
+        } catch (err) { log(`pool order failed on ${pair.name}: ${String(err).slice(0, 120)}`); }
       }
     }
     await new Promise((r) => setTimeout(r, cfg.tickMs));
   }
 }
 
-async function quote(pub: ReturnType<typeof createPublicClient>, cfg: ReturnType<typeof loadConfig>, g: Gladiator, tokenIn: Address, tokenOut: Address, amount: bigint, td: Hex): Promise<bigint | null> {
+// A quote as the taker that would take: the router reads the caller as the taker, so a gate on the
+// pass answers differently to the passed taker and to the raider.
+async function quote(pub: ReturnType<typeof createPublicClient>, cfg: Config, g: Gladiator, tokenIn: Address, tokenOut: Address, amount: bigint, taker: TakerRt): Promise<bigint | null> {
   try {
-    const [, out] = await pub.readContract({ address: cfg.router, abi: routerAbi, functionName: "quote", args: [g.order, tokenIn, tokenOut, amount, td] });
+    const [, out] = await pub.readContract({ address: cfg.router, abi: routerAbi, functionName: "quote", args: [g.order, tokenIn, tokenOut, amount, taker.td], account: taker.address });
     return out;
-  } catch { return null; }   // a cap or an empty side: no quote, no take
+  } catch { return null; }   // a cap, a gate, an empty side: no quote, no take
 }
 
-async function take(wallet: ReturnType<typeof createWalletClient>, cfg: ReturnType<typeof loadConfig>, g: Gladiator, tokenIn: Address, tokenOut: Address, amount: bigint, td: Hex, why: string): Promise<string | null> {
+async function take(wallet: ReturnType<typeof createWalletClient>, cfg: Config, g: Gladiator, tokenIn: Address, tokenOut: Address, amount: bigint, taker: TakerRt, why: string, fmt: (a: Address, n: bigint) => string): Promise<string | null> {
   try {
-    const hash = await wallet.writeContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args: [g.order, tokenIn, tokenOut, amount, td], chain: wallet.chain, account: wallet.account! });
-    return `${why} ${tokenIn === cfg.usdc ? formatUnits(amount, 6) + " USDC" : formatUnits(amount, 18) + " WETH"} in (${hash.slice(0, 10)})`;
-  } catch (err) { log(`take failed ${why}: ${String(err).slice(0, 140)}`); return null; }
+    const hash = await wallet.writeContract({ address: taker.address, abi: takerAbi, functionName: "swap", args: [g.order, tokenIn, tokenOut, amount, taker.td], chain: wallet.chain, account: wallet.account! });
+    return `${why} (${taker.name}) ${fmt(tokenIn, amount)} in (${hash.slice(0, 10)})`;
+  } catch (err) { log(`take failed ${why} (${taker.name}): ${String(err).slice(0, 140)}`); return null; }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

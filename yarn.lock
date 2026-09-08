@@ -1108,6 +1108,7 @@ __metadata:
     tsx: "npm:^4.20.0"
     typescript: "npm:^5.9.0"
     viem: "npm:^2.37.0"
+    vitest: "npm:^3.0.0"
   languageName: unknown
   linkType: soft
 
