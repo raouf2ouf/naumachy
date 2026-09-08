@@ -1,0 +1,13 @@
+[Unit]
+Description=Aquascan enrichment loop (naumachy)
+After=network-online.target docker.service
+[Service]
+User=naumachy
+WorkingDirectory=/home/naumachy/naumachy
+Environment=PATH=/home/naumachy/node-current/bin:/usr/local/bin:/usr/bin:/bin
+Environment=LLAMA_CALLS_PER_PASS=400
+ExecStart=/home/naumachy/node-current/bin/yarn workspace @naumachy/aquascan-enrich dev
+Restart=always
+RestartSec=15
+[Install]
+WantedBy=multi-user.target

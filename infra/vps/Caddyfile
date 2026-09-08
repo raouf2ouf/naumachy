@@ -1,0 +1,12 @@
+# Aquascan on naumachy.xyz: the built web app as static files, the API proxied on /api.
+naumachy.xyz, www.naumachy.xyz {
+	encode zstd gzip
+	handle /api/* {
+		reverse_proxy 127.0.0.1:3100
+	}
+	handle {
+		root * /srv/naumachy/web
+		try_files {path} /index.html
+		file_server
+	}
+}
