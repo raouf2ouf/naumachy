@@ -3,30 +3,30 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { api, type Band, type Chain, type DeskFees, type FillRow, type Priced } from "../lib/api";
 import { bandText, bps, compact, feeBps, percent, shortAddr, usd } from "../lib/format";
-import { Addr, ChainChip, EdgeCell, Failed, Loading, Money, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
+import { Addr, ChainChip, EdgeCell, Failed, Loading, Money, Pairs, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
 
-export function Tile({ label, p, signed, colored, sub }: { label: string; p: Priced; signed?: boolean; colored?: boolean; sub?: string | null }) {
+function Score({ label, p, signed, colored, sub, primary }: { label: string; p: Priced; signed?: boolean; colored?: boolean; sub?: string | null; primary?: boolean }) {
   return (
-    <div className="panel px-4 py-3">
-      <div className="text-xs text-ink-muted">{label}</div>
-      <div className="text-lg mt-0.5"><Money p={p} signed={signed} colored={colored} /></div>
-      {sub && <div className="text-xs text-ink-faint">{sub}</div>}
+    <div className={primary ? "primary" : ""}>
+      <div className="l">{label}</div>
+      <div className="v"><Money p={p} signed={signed} colored={colored} /></div>
+      {sub && <div className="b">{sub}</div>}
     </div>
   );
 }
 
 // The six numbers every scored page opens with. The headline is the fill re-marked five minutes
-// later, once the market has re-priced; the fill-time edge is kept beside it.
+// later, once the market has re-priced; it alone carries the colour. Its companions stay quiet.
 export function ScoreTiles({ s, volumeLabel = "Volume" }: { s: { volume_usd: Priced; edge_usd: Priced; markout_5m_usd: Priced; markout_1h_usd: Priced; markout_24h_usd: Priced; pnl_usd_marked: Priced; markout_5m_bps: Band | null; markout_1h_bps: Band | null }; volumeLabel?: string }) {
   const v = s.volume_usd.value;
   return (
-    <div className="mt-5 grid grid-cols-2 md:grid-cols-6 gap-3">
-      <Tile label={volumeLabel} p={s.volume_usd} />
-      <Tile label="Edge, 5 min after fill" p={s.markout_5m_usd} signed colored sub={bandText(s.markout_5m_bps)} />
-      <Tile label="Edge at fill" p={s.edge_usd} signed colored sub={bps(s.edge_usd.value, v)} />
-      <Tile label="Marked 1 hour later" p={s.markout_1h_usd} signed colored sub={bandText(s.markout_1h_bps)} />
-      <Tile label="Marked 1 day later" p={s.markout_24h_usd} signed colored sub={bps(s.markout_24h_usd.value, v)} />
-      <Tile label="Position at latest prices" p={s.pnl_usd_marked} signed colored />
+    <div className="scores">
+      <Score label="Edge, 5 min after fill" p={s.markout_5m_usd} signed colored sub={bandText(s.markout_5m_bps)} primary />
+      <Score label={volumeLabel} p={s.volume_usd} />
+      <Score label="Edge at fill" p={s.edge_usd} signed sub={bps(s.edge_usd.value, v)} />
+      <Score label="Marked 1 hour later" p={s.markout_1h_usd} signed sub={bandText(s.markout_1h_bps)} />
+      <Score label="Marked 1 day later" p={s.markout_24h_usd} signed sub={bps(s.markout_24h_usd.value, v)} />
+      <Score label="Position at latest prices" p={s.pnl_usd_marked} signed />
     </div>
   );
 }
@@ -54,16 +54,16 @@ function FeePanel({ fees, makerFee, protocolFee, volume }: { fees: DeskFees; mak
   const uniform = fees.maker_fee_bps_min !== null && fees.maker_fee_bps_min === fees.maker_fee_bps_max;
   const side = fees.maker_sides.length === 1 ? (fees.maker_sides[0] === "in" ? "on the token it takes in" : "on the token it gives out") : "on one side of each swap";
   return (
-    <div className="mt-4 panel px-5 py-4 text-[13px]">
+    <div className="mt-3 panel px-5 py-4 text-[13px]">
       <div className="text-xs text-ink-muted">Fees, read from the programs</div>
       <p className="mt-1">
         {fees.maker_fee_bps === null ? <>Its programs charge no maker fee.</> : (
           <>Charges <b className="font-medium">{feeBps(fees.maker_fee_bps)}</b> {side}{uniform ? "" : `, from ${feeBps(fees.maker_fee_bps_min)} to ${feeBps(fees.maker_fee_bps_max)} across ${compact(fees.decoded, 0)} strategies, weighted by volume`}
-            {makerFee.value !== null && volume.value !== null && <>, about <b className="font-medium">{usd(makerFee.value)}</b> earned on {usd(volume.value)}</>}.</>
+            {makerFee.value !== null && volume.value !== null && <>, about <b className="font-medium fee">{usd(makerFee.value)}</b> earned on {usd(volume.value)}</>}.</>
         )}
         {" "}
         {fees.protocol_fee_bps_max === null || fees.protocol_fee_bps_max === 0 ? <>No protocol fee.</> : (
-          <>The protocol pulled <b className="font-medium"><Money p={protocolFee} /></b> out of its fills at {fees.protocol_fee_bps_min === fees.protocol_fee_bps_max ? feeBps(fees.protocol_fee_bps_min) : `${feeBps(fees.protocol_fee_bps_min)} to ${feeBps(fees.protocol_fee_bps_max)}`}
+          <>The protocol pulled <b className="font-medium fee"><Money p={protocolFee} /></b> out of its fills at {fees.protocol_fee_bps_min === fees.protocol_fee_bps_max ? feeBps(fees.protocol_fee_bps_min) : `${feeBps(fees.protocol_fee_bps_min)} to ${feeBps(fees.protocol_fee_bps_max)}`}
             {fees.protocol_recipients.length > 0 && <>, paid to {fees.protocol_recipients.map((r, i) => <span key={r} className="mono" title={r}>{i > 0 ? ", " : ""}{shortAddr(r, 8, 4)}</span>)}</>}.</>
         )}
         {fees.decoded < fees.strategies && <span className="text-ink-faint"> {fees.strategies - fees.decoded} of its strategies run on a router we cannot read.</span>}
@@ -82,12 +82,13 @@ export function DeskDetail() {
   return (
     <div className="fade">
       <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="text-xl font-medium">{d.maker_label ? <span>{d.maker_label} <Addr value={d.maker} chars={6} className="text-base text-ink-muted" /></span> : <Addr value={d.maker} chars={10} />}</h1>
+        <h1 className="page-title">{d.maker_label ? <span>{d.maker_label} <Addr value={d.maker} chars={6} className="text-base text-ink-muted" /></span> : <Addr value={d.maker} chars={10} />}</h1>
         <ChainChip chain={c} />
         <span className="chip" title={d.instructions ? d.instructions.join(" > ") : d.template}>{d.template_name ?? `template ${shortAddr(d.template, 8, 4)}`}</span>
         <span className="text-ink-muted text-[13px]"><span className="gain">{d.live}</span> live of {d.strategies_total} strategies</span>
       </div>
-      <p className="text-ink-muted text-[13px] mt-2">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
+      <p className="mt-2 text-[13.5px]"><span className="text-ink-muted mr-2">Trades</span><Pairs pairs={d.pairs} max={4} /></p>
+      <p className="page-desc">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
 
       <ScoreTiles s={d} volumeLabel="Volume, all time" />
       <FeePanel fees={d.fees} makerFee={d.maker_fee_usd} protocolFee={d.protocol_fee_usd} volume={d.volume_usd} />

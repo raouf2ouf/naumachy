@@ -27,60 +27,64 @@ export function Overview() {
 
   return (
     <div className="fade">
-      <div className="flex items-start justify-between gap-8 flex-wrap">
-        <div className="max-w-[44rem]">
-          <p className="claim">
-            In {WINDOW_TEXT[window]}, makers on Aqua settled <b>{tilde}{h.volume_usd.value === null ? "an unpriced volume" : usd(h.volume_usd.value)}</b> across <b>{compact(h.economic_fills, 1)}</b> trades
-            {h.markout_5m_usd.value !== null ? <> and, once the market had re-priced five minutes later, {h.markout_5m_usd.value < 0 ? "had given up" : "had kept"} <b>{tilde}{usd(Math.abs(h.markout_5m_usd.value))}</b>{h.markout_5m_bps && <> of it, <b>{bandText(h.markout_5m_bps)}</b></>}.</>
-              : h.edge_usd.value === null ? <> on {chains.length} chains.</> : <>, keeping <b>{tilde}{usd(h.edge_usd.value, true)}</b> of edge against the venue's own price.</>}
+      <div className="hero">
+        <div className="hero-stat">
+          <div className="l" title="Programs shipped to Aqua and still quoting">Strategies live</div>
+          <div className="v">{compact(o.totals.live, 0)}</div>
+          <div className="b">{compact(o.totals.desks, 0)} desks, {compact(o.totals.makers, 0)} makers</div>
+        </div>
+        <div className="hero-stat">
+          <div className="l">Traded, {WINDOW_TEXT[window]}</div>
+          <div className="v">{h.volume_usd.value === null ? <span className="text-ink-faint">unpriced</span> : <>{tilde}{usd(h.volume_usd.value)}</>}</div>
+          <div className="b">{compact(h.economic_fills, 1)} fills on {chains.length} chains{partial && <span className="chip warn ml-2">priced {Math.round(h.volume_usd.confidence * 100)}%</span>}</div>
+        </div>
+        <div className="hero-stat">
+          <div className="l">Fees makers charged</div>
+          <div className="v fee">{h.maker_fee_usd.value === null ? <span className="text-ink-faint">unpriced</span> : usd(h.maker_fee_usd.value)}</div>
+          <div className="b">{fees.maker_fee_bps !== null && <>{feeBps(fees.maker_fee_bps)} on average</>}{protocolTotal !== null && <>; the protocol took <span className="fee">{usd(protocolTotal)}</span></>}</div>
+        </div>
+        <div className="hero-stat primary">
+          <div className="l" title="Each fill re-marked at the pool's price five minutes later, once the market had re-priced">Makers' result, 5 min after their fills</div>
+          <div className="v">{h.markout_5m_usd.value === null ? <span className="text-ink-faint">not yet marked</span> : <span className={h.markout_5m_usd.value < 0 ? "loss" : "gain"}>{tilde}{usd(h.markout_5m_usd.value, true)}</span>}</div>
+          <div className="b">{h.markout_5m_bps ? <>{bandText(h.markout_5m_bps)} of what they traded</> : <>&nbsp;</>}</div>
+        </div>
+      </div>
+
+      <div className="section">
+        <div className="section-head">
+          <div>
+            <h2>Daily volume</h2>
+            <p className="section-desc">{topChain && totalVolume > 0 ? <>{CHAIN_NAME[topChain.chain]} carries {percent((topChain.volume_usd.value ?? 0) / totalVolume)} of it.</> : "Settled on Aqua, by day."}{partial && <span className="chip warn ml-2">priced {Math.round(h.volume_usd.confidence * 100)}%</span>}</p>
+          </div>
+          <Windows value={window} onChange={setWindow} />
+        </div>
+        {se.data ? <VolumeChart series={se.data} /> : <div className="h-44" />}
+        {h.edge_usd.value !== null && h.markout_5m_usd.value !== null && (
+          <p className="horizons">
+            <span className="horizons-l">The same fills, marked</span>
+            <span><span className="l">at the fill</span><span className="v">{tilde}{usd(h.edge_usd.value, true)}</span></span>
+            <span className="primary"><span className="l">5 minutes later</span><span className="v">{tilde}{usd(h.markout_5m_usd.value, true)}</span></span>
+            {h.markout_1h_usd.value !== null && <span><span className="l">1 hour later</span><span className="v">{tilde}{usd(h.markout_1h_usd.value, true)}</span></span>}
+            {h.markout_24h_usd.value !== null && <span><span className="l">1 day later</span><span className="v">{tilde}{usd(h.markout_24h_usd.value, true)}</span></span>}
+            <span className="horizons-note">Negative means the market moved against the makers after they traded. {compact(o.totals.strategies, 0)} strategies have been shipped since the registries began.</span>
           </p>
-          {h.edge_usd.value !== null && h.markout_5m_usd.value !== null && (
-            <p className="text-ink-muted mt-3 text-[15px]">
-              At the fill itself the same trades showed <span className={h.edge_usd.value < 0 ? "loss" : "gain"}>{tilde}{usd(h.edge_usd.value, true)}</span>;
-              {h.markout_1h_usd.value !== null && <> marked one hour later, <span className={h.markout_1h_usd.value < 0 ? "loss" : "gain"}>{tilde}{usd(h.markout_1h_usd.value, true)}</span></>}
-              {h.markout_24h_usd.value !== null && <>; one day later, <span className={h.markout_24h_usd.value < 0 ? "loss" : "gain"}>{tilde}{usd(h.markout_24h_usd.value, true)}</span></>}.
-            </p>
-          )}
-          {fees.maker_fee_bps !== null && (
-            <p className="text-ink-muted mt-2 text-[15px]">
-              Makers charged <b className="text-ink font-medium">{feeBps(fees.maker_fee_bps)}</b> on average{topTier && topTier.maker_fee_bps !== null && topTier.share > 0.5 && <>, {percent(topTier.share)} of the volume at {feeBps(topTier.maker_fee_bps)}</>}
-              {h.maker_fee_usd.value !== null && <>, about <b className="text-ink font-medium">{usd(h.maker_fee_usd.value)}</b> in fees</>}
-              {protocolTotal !== null && <>; the protocol collected <b className="text-ink font-medium">{usd(protocolTotal)}</b></>}.
-            </p>
-          )}
-        </div>
-        <div className="panel px-5 py-4 min-w-[220px] max-w-[26rem]">
-          <div className="text-2xl font-medium">{compact(o.totals.live, 0)} <span className="text-base text-ink-muted font-normal">strategies live</span></div>
-          <div className="text-ink-muted text-[13px] mt-1">{compact(o.totals.desks, 0)} desks, {compact(o.totals.makers, 0)} makers, {compact(o.totals.strategies, 0)} strategies ever shipped</div>
-          <div className="flex flex-wrap gap-1.5 mt-3">{chains.map((c) => <ChainChip key={c.chain} chain={c.chain} />)}</div>
-          <Link to="/desks" className="block mt-3 text-[13px] text-bronze">Browse the desks</Link>
-        </div>
+        )}
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
-        <p className="text-ink-muted text-[13px]">
-          Daily volume{topChain && totalVolume > 0 ? <>. {CHAIN_NAME[topChain.chain]} carries {percent((topChain.volume_usd.value ?? 0) / totalVolume)} of it.</> : "."}
-          {partial && <span className="chip warn ml-2">priced {Math.round(h.volume_usd.confidence * 100)}%</span>}
-        </p>
-        <Windows value={window} onChange={setWindow} />
-      </div>
-      {se.data ? <VolumeChart series={se.data} /> : <div className="h-44" />}
-
-      <Section title={`Top desks by volume, ${window === "all" ? "all time" : window}`} aside={<Link to="/desks" className="text-bronze">All desks</Link>}>
+      <Section title={`Top desks by volume, ${window === "all" ? "all time" : window}`} description="A desk is one maker running one strategy template on one chain." aside={<Link to="/desks">All desks</Link>}>
         <div className="overflow-x-auto panel">
           <table>
-            <thead><tr><th>#</th><th>Desk</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fee</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th><th className="num">Marked 1 h later</th></tr></thead>
+            <thead><tr><th>#</th><th>Desk</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th></tr></thead>
             <tbody>
               {o.top_desks.map((d, i) => (
                 <tr key={d.chain + d.desk}>
                   <td className="text-ink-faint">{i + 1}</td>
-                  <td><DeskLink chain={d.chain} desk={d.desk} maker={d.maker} makerLabel={d.maker_label} templateName={d.template_name} /></td>
+                  <td><DeskLink chain={d.chain} desk={d.desk} maker={d.maker} makerLabel={d.maker_label} templateName={d.template_name} pairs={d.pairs} /></td>
                   <td className="num">{compact(d.fills, 0)}</td>
                   <td className="num"><Money p={d.volume_usd} /></td>
-                  <td className="num text-ink-muted">{feeBps(d.maker_fee_bps)}</td>
-                  <td className="num"><Money p={d.markout_5m_usd} signed colored />{d.markout_5m_bps && <span className="text-ink-faint ml-1.5 text-xs">{bandText(d.markout_5m_bps)}</span>}</td>
-                  <td className="num"><EdgeCell edge={d.edge_usd} volume={d.volume_usd} /></td>
-                  <td className="num"><Money p={d.markout_1h_usd} signed colored /></td>
+                  <td className="num"><Money p={d.maker_fee_usd} className="fee" /><span className="sub">{feeBps(d.maker_fee_bps)}</span></td>
+                  <td className="num"><Money p={d.markout_5m_usd} signed colored className="font-medium" />{d.markout_5m_bps && <span className="band">{bandText(d.markout_5m_bps)}</span>}</td>
+                  <td className="num text-ink-muted"><EdgeCell edge={d.edge_usd} volume={d.volume_usd} /></td>
                 </tr>
               ))}
               {o.top_desks.length === 0 && <tr><td colSpan={8} className="text-ink-muted">No priced fills in this window yet.</td></tr>}
@@ -89,39 +93,36 @@ export function Overview() {
         </div>
       </Section>
 
-      <div className="mt-9 grid gap-6 md:grid-cols-[1.2fr_1.4fr_1fr]">
+      <div className="section grid gap-8 md:grid-cols-[1.2fr_1.4fr_1fr]">
         <div>
-          <h2 className="text-[15px] font-medium mb-3">Bleeding desks</h2>
-          <p className="text-xs text-ink-muted mb-3">Worst result one hour after filling, among desks with over $10K of volume.</p>
-          <div className="panel divide-y divide-water-700">
+          <div className="section-head"><div><h2>Bleeding desks</h2><p className="section-desc">Worst result one hour after filling, among desks with over $10K of volume.</p></div></div>
+          <div className="list">
             {bleeding.data?.map((d) => (
-              <div key={d.chain + d.desk} className="flex items-center justify-between px-4 py-2.5">
+              <div key={d.chain + d.desk} className="flex items-center justify-between px-1 py-2.5">
                 <DeskLink chain={d.chain} desk={d.desk} maker={d.maker} />
                 <Money p={d.markout_1h_usd} signed colored />
               </div>
             ))}
-            {bleeding.data?.length === 0 && <div className="px-4 py-3 text-ink-muted">Nothing priced enough to judge yet.</div>}
+            {bleeding.data?.length === 0 && <div className="px-1 py-3 text-ink-muted">Nothing priced enough to judge yet.</div>}
           </div>
         </div>
         <div>
-          <h2 className="text-[15px] font-medium mb-3">Latest ships</h2>
-          <p className="text-xs text-ink-muted mb-3">New strategies registered on Aqua, newest first.</p>
-          <div className="panel divide-y divide-water-700">
+          <div className="section-head"><div><h2>Latest ships</h2><p className="section-desc">New strategies registered on Aqua, newest first.</p></div></div>
+          <div className="list">
             {o.latest_ships.map((s) => (
-              <div key={s.chain + s.id} className="px-4 py-2.5 text-[13px] flex items-center gap-2 flex-wrap">
+              <div key={s.chain + s.id} className="ship">
                 <Link to={`/strategy/${s.chain}/${encodeURIComponent(s.id)}`} className="mono">{shortAddr(s.maker)}</Link>
-                <span className="text-ink-muted">shipped a {s.template_name ?? "strategy"} on</span>
                 <ChainChip chain={s.chain} />
+                <span className="ship-what text-ink-muted" title={s.template_name ?? "strategy"}>shipped a {s.template_name ?? "strategy"}</span>
                 <RegistryChip registry={s.registry} />
-                <When ts={s.shipped_at} className="text-ink-faint ml-auto" />
+                <When ts={s.shipped_at} className="text-ink-faint ship-when" />
               </div>
             ))}
           </div>
         </div>
         <div>
-          <h2 className="text-[15px] font-medium mb-3">By chain</h2>
-          <p className="text-xs text-ink-muted mb-3">Volume share in the window.</p>
-          <div className="panel px-4 py-3 space-y-2.5">
+          <div className="section-head"><div><h2>By chain</h2><p className="section-desc">Volume share in the window.</p></div></div>
+          <div className="space-y-3 pt-1">
             {chains.map((c) => {
               const share = totalVolume > 0 ? (c.volume_usd.value ?? 0) / totalVolume : 0;
               return (
@@ -135,7 +136,7 @@ export function Overview() {
         </div>
       </div>
 
-      <Section title="Fees" aside="What the programs charge, read from their bytecode">
+      <Section title="Fees" description="What the programs charge, read from their bytecode.">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="overflow-x-auto panel">
             <table>
@@ -161,7 +162,7 @@ export function Overview() {
                   <tr key={i}>
                     <td>{r.recipient ? <span className="mono" title={r.recipient}>{shortAddr(r.recipient, 8, 4)}</span> : <span className="text-ink-muted">{r.kind === "dynamic" ? "a dynamic fee provider" : "no protocol fee"}</span>}</td>
                     <td className="num text-ink-muted" title={r.bps_min === null ? "" : r.bps_min === r.bps_max ? `programs charge ${feeBps(r.bps_min)}` : `programs charge from ${feeBps(r.bps_min)} to ${feeBps(r.bps_max)}`}>{r.fee_usd !== null && r.volume_usd ? feeBps((r.fee_usd / r.volume_usd) * 1e4) : ""}</td>
-                    <td className="num">{r.fee_usd === null ? <span className="text-ink-faint">unpriced</span> : usd(r.fee_usd)}</td>
+                    <td className="num fee">{r.fee_usd === null ? <span className="text-ink-faint">unpriced</span> : usd(r.fee_usd)}</td>
                     <td className="num">{r.volume_usd === null ? "" : usd(r.volume_usd)}</td>
                   </tr>
                 ))}
@@ -169,7 +170,7 @@ export function Overview() {
             </table>
           </div>
         </div>
-        <p className="text-xs text-ink-muted mt-3 max-w-3xl">The maker fee is what a program adds on the token it takes in; the maker keeps it, so it is already inside the edge. The protocol fee is pulled out of the maker's ledger in the same transaction, so every number here is net of it. Maker fee dollars are the rate applied to volume; protocol fee dollars are the pulls themselves, valued at the fill hour.</p>
+        <p className="section-desc mt-3">The maker fee is what a program adds on the token it takes in; the maker keeps it, so it is already inside the edge. The protocol fee is pulled out of the maker's ledger in the same transaction, so every number here is net of it. Maker fee dollars are the rate applied to volume; protocol fee dollars are the pulls themselves, valued at the fill hour.</p>
       </Section>
       <Provenance at={o.rollup_at} extra={`Latest fill ${relTime(Math.max(0, ...o.latest_ships.map((s) => s.shipped_at)))}.`} />
     </div>

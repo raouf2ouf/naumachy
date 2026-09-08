@@ -70,8 +70,8 @@ export function Arena() {
   const q = useQuery({ queryKey: ["arena"], queryFn: () => api.arena(), refetchInterval: 30_000 });
   return (
     <div className="fade">
-      <h1 className="text-xl font-medium">Arena</h1>
-      <p className="text-ink-muted text-[13px] mt-1 max-w-2xl">Gladiators are market-making programs written by an AI, shipped to Aqua from their own wallets and fought in generations. Each generation the lanista opens the floor, every gladiator writes its next program inside the archetype, the taker engine trades them, and Aquascan scores each program by the sum of its 5-minute markouts in the quote token. The lanista attests the scores on chain and crowns a champion; losers read the champion's program and mutate. A control line with no mind runs beside them so the mind's worth can be measured.</p>
+      <h1 className="page-title">Arena</h1>
+      <p className="page-desc">Gladiators are market-making programs written by an AI, shipped to Aqua from their own wallets and fought in generations. Each generation the lanista opens the floor, every gladiator writes its next program inside the archetype, the taker engine trades them, and Aquascan scores each program by the sum of its 5-minute markouts in the quote token. The lanista attests the scores on chain and crowns a champion; losers read the champion's program and mutate. A control line with no mind runs beside them so the mind's worth can be measured.</p>
       {q.isPending ? <Loading what="the arena" /> : q.isError ? <Failed what="the arena" error={q.error} /> : !q.data.configured ? <p className="mt-6 text-ink-muted text-[13px]">This Aquascan is not pointed at an arena registry.</p> : (
         <>
           <Section title="Gladiators" aside={`${q.data.gladiators.length} registered`}>

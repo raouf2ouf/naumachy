@@ -10,32 +10,34 @@ const nav = [
   { to: "/status", label: "Status" },
 ];
 
+// A rail on the left with the name and the five sections; the page takes the rest of the width.
+// The search is a full row at the top of the page, the width of the content.
 export function Shell() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[200px_1fr]">
-      <aside className="border-b md:border-b-0 md:border-r border-water-700 bg-water-900 px-5 py-5 md:py-7 flex flex-wrap md:flex-col items-center md:items-start gap-4 md:gap-8">
-        <NavLink to="/" className="flex items-center gap-2.5">
-          <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="var(--color-water-700)" /><path d="M5 20c3-4 6-4 9 0s6 4 9 0 3-4 4-3" fill="none" stroke="var(--color-bronze)" strokeWidth="2.5" strokeLinecap="round" /></svg>
-          <span>
-            <span className="block font-semibold leading-tight">Aquascan</span>
-            <span className="block text-[11px] text-ink-muted leading-tight">keeps score on Aqua</span>
-          </span>
+    <div className="shell">
+      <aside className="rail">
+        <NavLink to="/" className="brand" aria-label="Aquascan, overview">
+          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--color-water-700)" /><path d="M5 20c3-4 6-4 9 0s6 4 9 0 3-4 4-3" fill="none" stroke="var(--color-bronze)" strokeWidth="2.5" strokeLinecap="round" /></svg>
+          <span><span className="brand-name">Aquascan</span><span className="brand-tag">keeps score on Aqua</span></span>
         </NavLink>
-        <nav className="flex flex-wrap md:flex-col gap-1 md:gap-0.5 text-[13px]">
-          {nav.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `px-2 py-1 rounded ${isActive ? "text-bronze bg-water-800" : "text-ink-muted hover:text-ink"}`}>{n.label}</NavLink>
-          ))}
+        <nav className="nav" aria-label="Sections">
+          {nav.map((n) => <NavLink key={n.to} to={n.to} end={n.end}>{n.label}</NavLink>)}
         </nav>
-        <div className="md:mt-auto ml-auto md:ml-0"><ThemeToggle /></div>
+        <div className="rail-foot">
+          <ThemeToggle />
+        </div>
       </aside>
-      <div className="min-w-0">
-        <form className="px-6 md:px-8 pt-6" onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 3) navigate(`/search?q=${encodeURIComponent(q.trim())}`); }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a maker address, a strategy hash, or a desk" aria-label="Search"
-            className="w-full max-w-2xl bg-water-900 border border-water-700 rounded-md px-3.5 py-2 text-[13px] placeholder:text-ink-faint focus:border-bronze-deep outline-none" />
+      <div className="content">
+        <form className="searchbar" role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 3) navigate(`/search?q=${encodeURIComponent(q.trim())}`); }}>
+          <label className="search">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M10.5 10.5 14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a maker address, a strategy hash or a desk" aria-label="Search" spellCheck={false} autoComplete="off" />
+            <span className="search-hint" aria-hidden="true">Enter</span>
+          </label>
         </form>
-        <main className="px-6 md:px-8 py-6">
+        <main className="page">
           <Outlet />
         </main>
       </div>

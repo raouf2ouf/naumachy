@@ -28,8 +28,8 @@ function FeeSentence({ fees, makerFee, protocolFee }: { fees: StrategyFees | nul
     : <>a protocol fee of {feeBps(fees.protocol_fee_bps)} pulled out of the maker's ledger, paid to <span className="mono" title={fees.protocol_fee_to ?? ""}>{shortAddr(fees.protocol_fee_to ?? "", 8, 4)}</span></>;
   return (
     <>{maker}; {protocol}.
-      {makerFee?.value != null && <> About {usd(makerFee.value)} of maker fees earned</>}
-      {protocolFee?.value != null && protocolFee.value > 0 && <>{makerFee?.value != null ? " and " : " "}{usd(protocolFee.value)} of protocol fees paid</>}
+      {makerFee?.value != null && <> About <span className="fee">{usd(makerFee.value)}</span> of maker fees earned</>}
+      {protocolFee?.value != null && protocolFee.value > 0 && <>{makerFee?.value != null ? " and " : " "}<span className="fee">{usd(protocolFee.value)}</span> of protocol fees paid</>}
       {(makerFee?.value != null || (protocolFee?.value != null && protocolFee.value > 0)) && " so far."}
     </>
   );
@@ -46,20 +46,20 @@ export function StrategyDetail() {
   return (
     <div className="fade">
       <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="text-xl font-medium"><Addr value={s.strategy_hash} chars={10} /></h1>
+        <h1 className="page-title"><Addr value={s.strategy_hash} chars={10} /></h1>
         <StatusDot status={s.status} />
         <ChainChip chain={c} />
         <span className="chip" title={s.instructions ? s.instructions.join(" > ") : s.template}>{s.template_name ?? `template ${shortAddr(s.template, 8, 4)}`}</span>
         <RegistryChip registry={s.registry} />
       </div>
-      <p className="text-ink-muted text-[13px] mt-2">
+      <p className="page-desc">
         Shipped <When ts={s.shipped_at} /> by <Link to={`/desk/${chain}/${encodeURIComponent(s.desk)}`} className="mono text-ink">{shortAddr(s.maker)}</Link> through {s.app_label ? <span title={s.app}>{s.app_label}</span> : <>router <span className="mono" title={s.app}>{shortAddr(s.app)}</span></>}
         {s.docked_at ? <>, docked <When ts={s.docked_at} />. Docked means revoked: tokens never left the wallet.</> : <>. Still live.</>}
       </p>
 
       {st ? <ScoreTiles s={st} /> : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
       {st && (
-        <p className="text-xs text-ink-faint mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices.</> : <>Scored against hourly prices: no prints of this pair nearby, on the tape or in a pool.</>}</p>
+        <p className="text-xs text-ink-muted mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices.</> : <>Scored against hourly prices: no prints of this pair nearby, on the tape or in a pool.</>}</p>
       )}
 
       <div className="mt-4 panel px-5 py-4 text-[13px]">

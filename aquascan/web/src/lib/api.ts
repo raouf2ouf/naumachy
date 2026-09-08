@@ -21,8 +21,9 @@ export interface Overview {
   top_desks: DeskSummary[];
   latest_ships: { chain: Chain; id: string; maker: string; desk: string; template: string; template_name: string | null; registry: string; shipped_at: number; shipped_tx: string; status: string }[];
 }
-export interface DeskSummary extends Scored { chain: Chain; desk: string; maker: string; maker_label?: string | null; template: string; template_name?: string | null; template_kind?: string | null; fills: number; maker_fee_bps: number | null }
-export interface DeskRow extends DeskSummary { strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
+export interface DeskSummary extends Scored { pairs?: DeskPair[]; chain: Chain; desk: string; maker: string; maker_label?: string | null; template: string; template_name?: string | null; template_kind?: string | null; fills: number; maker_fee_bps: number | null }
+export interface DeskPair { base_token: string; quote_token: string; base_symbol: string | null; quote_symbol: string | null; fills: number; share: number }
+export interface DeskRow extends DeskSummary { pairs?: DeskPair[]; strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
 export interface Series { window: string; chain: string; rollup_at: string; source: string; days: { day: number; date: string; fills: number; volume_usd: number | null; edge_usd: number | null; markout_5m_usd: number | null; markout_1h_usd: number | null; drift_1h_usd: number | null; protocol_fee_usd: number | null; maker_fee_usd: number | null }[] }
 export interface PnlQuote { value: number; quote_token: string; quote_symbol?: string | null; coverage: number; mark_age_s?: number | null; source: string }
 export interface StrategyRow extends Scored { id: string; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; maker_fee_bps: number | null; protocol_fee_bps: number | null; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }

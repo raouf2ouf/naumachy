@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { Chain, Priced } from "../lib/api";
+import type { Chain, DeskPair, Priced } from "../lib/api";
 import { CHAIN_HUE, CHAIN_NAME, REGISTRY_CANONICAL, absTime, bps, relTime, shortAddr, usd } from "../lib/format";
 
 export function ChainChip({ chain }: { chain: Chain }) {
@@ -41,19 +41,23 @@ export function Money({ p, signed = false, colored = false, pending = false, cla
 
 export function EdgeCell({ edge, volume }: { edge: Priced; volume: Priced }) {
   const b = bps(edge.value, volume.value);
-  return <span><Money p={edge} signed colored />{b && <span className="text-ink-faint ml-1.5 text-xs">{b}</span>}</span>;
+  return <span><Money p={edge} signed />{b && <span className="band">{b}</span>}</span>;
 }
 
 export function When({ ts, className = "" }: { ts: number | null | undefined; className?: string }) {
   return <span className={className} title={absTime(ts)}>{relTime(ts)}</span>;
 }
 
-export function DeskLink({ chain, desk, maker, makerLabel, templateName, className = "" }: { chain: Chain; desk: string; maker: string; makerLabel?: string | null; templateName?: string | null; className?: string }) {
+// A desk in a table: who and where on the first line, what it trades on the second, the template in faint.
+export function DeskLink({ chain, desk, maker, makerLabel, templateName, pairs, className = "" }: { chain: Chain; desk: string; maker: string; makerLabel?: string | null; templateName?: string | null; pairs?: DeskPair[]; className?: string }) {
   return (
-    <Link to={`/desk/${chain}/${encodeURIComponent(desk)}`} className={`inline-flex items-center gap-2 ${className}`}>
-      {makerLabel ? <span className="font-medium">{makerLabel}</span> : <span className="mono">{shortAddr(maker)}</span>}
-      <ChainChip chain={chain} />
-      {templateName && <span className="text-ink-muted text-xs">{templateName}</span>}
+    <Link to={`/desk/${chain}/${encodeURIComponent(desk)}`} className={`desk-cell ${className}`}>
+      <span className="desk-who">
+        {makerLabel ? <span className="font-medium">{makerLabel}</span> : <span className="mono">{shortAddr(maker)}</span>}
+        <ChainChip chain={chain} />
+      </span>
+      {pairs && <span className="desk-what"><Pairs pairs={pairs} /></span>}
+      {templateName && <span className="desk-kind">{templateName}</span>}
     </Link>
   );
 }
@@ -65,11 +69,41 @@ export function ThemeToggle() {
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem("aquascan-theme", next); } catch { /* private mode */ }
   };
-  return <button onClick={flip} className="text-xs text-ink-muted hover:text-ink">{current === "dark" ? "Light theme" : "Dark theme"}</button>;
+  const label = current === "dark" ? "Switch to the light theme" : "Switch to the dark theme";
+  return (
+    <button onClick={flip} className="icon-button" aria-label={label} title={label}>
+      {current === "dark"
+        ? <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M3.4 12.6l1.3-1.3M11.3 4.7l1.3-1.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        : <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" /></svg>}
+      <span>{current === "dark" ? "Light theme" : "Dark theme"}</span>
+    </button>
+  );
+}
+
+// Every page opens the same way: what it is, in one sentence, and its controls on the right.
+export function PageHeader({ title, description, children }: { title: React.ReactNode; description?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className="page-header">
+      <div>
+        <h1 className="page-title">{title}</h1>
+        {description && <p className="page-desc">{description}</p>}
+      </div>
+      {children && <div className="page-controls">{children}</div>}
+    </div>
+  );
+}
+
+// One control for every choice among a few values: window, chain, sort.
+export function Segmented<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: [T, string][]; label: string }) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {options.map(([k, text]) => <button key={k} type="button" onClick={() => onChange(k)} className={k === value ? "on" : ""} aria-pressed={k === value}>{text}</button>)}
+    </div>
+  );
 }
 
 export function Loading({ what }: { what: string }) {
-  return <div className="text-ink-muted py-10 text-center">Loading {what}…</div>;
+  return <div className="loading" role="status">Loading {what}…</div>;
 }
 
 export function Failed({ what, error }: { what: string; error: unknown }) {
@@ -77,12 +111,15 @@ export function Failed({ what, error }: { what: string; error: unknown }) {
   return <div className="panel p-5 text-ink-muted">Could not load {what}. {msg === "not found" ? "Nothing here by that name." : `The API answered: ${msg}. Check that the enrichment service and API are running.`}</div>;
 }
 
-export function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+export function Section({ title, aside, description, children }: { title: string; aside?: React.ReactNode; description?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="mt-9">
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-[15px] font-medium">{title}</h2>
-        {aside && <div className="text-xs text-ink-muted">{aside}</div>}
+    <section className="section">
+      <div className="section-head">
+        <div>
+          <h2>{title}</h2>
+          {description && <p className="section-desc">{description}</p>}
+        </div>
+        {aside && <div className="section-aside">{aside}</div>}
       </div>
       {children}
     </section>
@@ -90,16 +127,22 @@ export function Section({ title, aside, children }: { title: string; aside?: Rea
 }
 
 export function Windows({ value, onChange }: { value: string; onChange: (w: string) => void }) {
-  return (
-    <div className="inline-flex gap-1 text-xs">
-      {["24h", "7d", "30d", "all"].map((w) => (
-        <button key={w} onClick={() => onChange(w)} className={`px-2 py-0.5 rounded ${w === value ? "bg-water-600 text-ink" : "text-ink-muted hover:text-ink"}`}>{w === "all" ? "all time" : w}</button>
-      ))}
-    </div>
-  );
+  return <Segmented value={value} onChange={onChange} label="Window" options={[["24h", "24h"], ["7d", "7d"], ["30d", "30d"], ["all", "all time"]]} />;
 }
 
 export function Provenance({ at, extra }: { at: string; extra?: string }) {
   const d = new Date(at);
-  return <footer className="mt-12 pt-4 border-t border-water-700 text-xs text-ink-faint">Chain data from six subgraphs on The Graph Network. Reference prices are the venue's own fills by the minute, or the pair's deepest pool on the same chain when the tape is thin; DefiLlama's hourly prices turn them into dollars and stand in where neither exists. Rolled up {relTime(d.getTime() / 1000)}. Only economic fills count.{extra ? ` ${extra}` : ""} <Link to="/status" className="text-ink-muted">Status</Link></footer>;
+  return <footer className="provenance">Chain data from six subgraphs on The Graph Network. Reference prices are the venue's own fills by the minute, or the pair's deepest pool on the same chain when the tape is thin; DefiLlama's hourly prices turn them into dollars and stand in where neither exists. Rolled up {relTime(d.getTime() / 1000)}. Only economic fills count.{extra ? ` ${extra}` : ""} <Link to="/status">Status</Link></footer>;
+}
+
+// What a desk trades: its top pairs by volume, each with its share of the desk's priced volume.
+export function Pairs({ pairs, max = 2, className = "" }: { pairs?: DeskPair[]; max?: number; className?: string }) {
+  if (!pairs || pairs.length === 0) return <span className={`text-ink-faint ${className}`}>no two-sided fills</span>;
+  const shown = pairs.slice(0, max); const rest = pairs.length - shown.length;
+  return (
+    <span className={`pairs ${className}`}>
+      {shown.map((p) => <span key={p.base_token + p.quote_token} title={`${p.fills} fills`}><span className="pair">{p.base_symbol ?? p.base_token.slice(0, 6)}/{p.quote_symbol ?? p.quote_token.slice(0, 6)}</span><span className="share">{Math.round(p.share * 100)}%</span></span>)}
+      {rest > 0 && <span className="share">+{rest}</span>}
+    </span>
+  );
 }

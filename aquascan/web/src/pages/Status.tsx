@@ -10,8 +10,8 @@ export function Status() {
   const h = q.data;
   return (
     <div className="fade">
-      <h1 className="text-xl font-medium">Status</h1>
-      <p className="text-ink-muted text-[13px] mt-1 max-w-2xl">Where each chain's lane stands against its subgraph, and how much of it is priced. Rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}.</p>
+      <h1 className="page-title">Status</h1>
+      <p className="page-desc">Where each chain's lane stands against its subgraph, and how much of it is priced. Rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}.</p>
       <div className="overflow-x-auto panel mt-5">
         <table>
           <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">By the minute</th><th className="num">Updated</th></tr></thead>

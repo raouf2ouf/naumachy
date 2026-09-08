@@ -14,11 +14,11 @@ export function Search() {
   const d = r.data; const none = d.makers.length + d.strategies.length + d.desks.length === 0;
   return (
     <div className="fade">
-      <h1 className="text-xl font-medium">Results for <span className="mono">{q}</span></h1>
+      <h1 className="page-title">Results for <span className="mono">{q}</span></h1>
       {none && <p className="text-ink-muted mt-3">Nothing starts with that. Addresses are matched as lowercase prefixes.</p>}
-      {d.desks.length > 0 && <div className="mt-6"><h2 className="text-[15px] font-medium mb-2">Desks</h2><div className="panel divide-y divide-water-700">{d.desks.map((x) => <Link key={x.chain + x.desk} to={`/desk/${x.chain}/${encodeURIComponent(x.desk)}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.maker)}</span><ChainChip chain={x.chain} /><span className="text-ink-faint ml-auto">{x.fills} fills</span></Link>)}</div></div>}
-      {d.strategies.length > 0 && <div className="mt-6"><h2 className="text-[15px] font-medium mb-2">Strategies</h2><div className="panel divide-y divide-water-700">{d.strategies.map((x) => <Link key={x.chain + x.id} to={`/strategy/${x.chain}/${encodeURIComponent(x.id)}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.strategy_hash, 10, 6)}</span><ChainChip chain={x.chain} /><StatusDot status={x.status} /></Link>)}</div></div>}
-      {d.makers.length > 0 && <div className="mt-6"><h2 className="text-[15px] font-medium mb-2">Makers</h2><div className="panel divide-y divide-water-700">{d.makers.map((x) => <Link key={x.chain + x.maker} to={`/search?q=${x.maker}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{x.maker}</span><ChainChip chain={x.chain} /></Link>)}</div></div>}
+      {d.desks.length > 0 && <div className="mt-6"><h2 className="text-[16px] font-semibold mb-2">Desks</h2><div className="panel list">{d.desks.map((x) => <Link key={x.chain + x.desk} to={`/desk/${x.chain}/${encodeURIComponent(x.desk)}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.maker)}</span><ChainChip chain={x.chain} /><span className="text-ink-faint ml-auto">{x.fills} fills</span></Link>)}</div></div>}
+      {d.strategies.length > 0 && <div className="mt-6"><h2 className="text-[16px] font-semibold mb-2">Strategies</h2><div className="panel list">{d.strategies.map((x) => <Link key={x.chain + x.id} to={`/strategy/${x.chain}/${encodeURIComponent(x.id)}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.strategy_hash, 10, 6)}</span><ChainChip chain={x.chain} /><StatusDot status={x.status} /></Link>)}</div></div>}
+      {d.makers.length > 0 && <div className="mt-6"><h2 className="text-[16px] font-semibold mb-2">Makers</h2><div className="panel list">{d.makers.map((x) => <Link key={x.chain + x.maker} to={`/search?q=${x.maker}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{x.maker}</span><ChainChip chain={x.chain} /></Link>)}</div></div>}
     </div>
   );
 }
