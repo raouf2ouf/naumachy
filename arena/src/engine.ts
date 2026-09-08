@@ -78,9 +78,10 @@ async function main() {
       const s = tape[tapeIndex++];
       try { await poolSwap(s.pair, s.tokenIn, s.tokenOut, s.amountIn); } catch (err) { log(`tape swap failed on ${s.pair.name}: ${String(err).slice(0, 120)}`); }
     }
+    const edge = BigInt(Math.round(cfg.edgeBps * 1e5));                                  // 1e9 base
     // informed flow: the taker reads the tape ahead. When a pair's price INFORMED_HORIZON_S from now
     // differs from the pool's price now by INFORMED_MOVE_BPS or more, it trades that direction against
-    // every gladiator on the pair first, with INFORMED_PROBABILITY per tick. The fill is marked five
+    // every gladiator on the pair whose quote still beats that price by the edge, with INFORMED_PROBABILITY per tick. The fill is marked five
     // minutes later at the moved price: this is the arbitrageur who sees the order flow, and the flow
     // that bleeds the mainnet desks.
     for (const pair of market.pairs) {
@@ -96,10 +97,17 @@ async function main() {
       // in the pair's conventional reading: "cbBTC/USDC" moves as cbBTC, whichever token the pool calls token0
       const [asset] = pair.name.split("/"); const assetUp = asset === sym(pair.oracleBase.address) ? baseUp : !baseUp;
       const assetMove = assetUp ? Math.abs(moveBps) : -Math.abs(moveBps);
+      // rational: it takes only where the quote still beats the price it foresees by the edge, so a fee
+      // that has ramped past the coming move prices it out, which is what a toxicity fee is for
+      const pFuture = BigInt(Math.round(ahead * 1e18));
       for (const g of gladiators) {
         if (!quotesPair(g, tokenIn, tokenOut)) continue;
-        if ((await quote(pub, cfg, g, tokenIn, tokenOut, amt, taker)) === null) continue;   // a gate, a cap: the quote says no before any transaction
-        const took = await take(wallet, cfg, g, tokenIn, tokenOut, amt, taker, `informed: ${assetUp ? "buys" : "sells"} ${asset} ahead of a ${assetMove.toFixed(1)} bps move`, fmt);
+        const q = await quote(pub, cfg, g, tokenIn, tokenOut, amt, taker);   // a gate, a cap: the quote says no before any transaction
+        if (q === null) continue;
+        const worthLater = fairOut(pair, pFuture, tokenOut, q);              // what the fill is worth in tokenIn once the move has happened
+        if (worthLater <= amt * (1_000_000_000n + edge) / 1_000_000_000n) continue;
+        const gainBps = Number((worthLater - amt) * 10_000n / amt);
+        const took = await take(wallet, cfg, g, tokenIn, tokenOut, amt, taker, `informed: ${assetUp ? "buys" : "sells"} ${asset} ahead of a ${assetMove.toFixed(1)} bps move, ${gainBps} bps net of the quote`, fmt);
         if (took) { fills += 1; arbs += 1; log(`${g.maker.slice(0, 10)} ${took} | ${pair.name} | fills ${fills} (informed ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
       }
     }
@@ -115,7 +123,6 @@ async function main() {
       try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
     }
     // arbitrage: on every pair, does a gladiator sell the base cheaper, or buy it dearer, than the pool by more than the edge?
-    const edge = BigInt(Math.round(cfg.edgeBps * 1e5));                                  // 1e9 base
     for (const pair of market.pairs) {
       const onPair = gladiators.filter((g) => quotesPair(g, pair.oracleBase.address, pair.oracleQuote.address));
       if (!onPair.length) continue;
