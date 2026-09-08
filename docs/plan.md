@@ -11,7 +11,7 @@ Every gate is a checkbox. A task that moves no gate is a task we question.
 - [ ] G1.1 A custom Aqua app: a modified SwapVM router (`NaumachyRouter`) redeployed with at least one custom opcode. "Projects that utilize SwapVM will be scored higher."
 - [ ] G1.2 Official Aqua and SwapVM contracts used (modified redeployment is explicitly allowed).
 - [ ] G1.3 Onchain execution of token transfers shown in the final demo. Local forks are OK per the track page. We show both: the gym on a fork and the arena on Base.
-- [ ] G1.4 A sophisticated DeFi position: gladiator programs compose concentrated ranges, oracle anchoring, fee tiers, a risk cap, and flash liquidity (the workshop hinted at flashloans as a differentiator).
+- [ ] G1.4 A sophisticated DeFi position: gladiator programs compose a pass gate, fees that widen with one-way flow or differ by the token the taker pays, a per-pair oracle anchor, a risk cap, and one ledger behind three markets (2026-09-08: built, on the fork; flash liquidity is possible through SwapVM's maker hooks but kept out as custody, not pricing).
 - [ ] G1.5 Positions demonstrated through tests and a UI (Foundry tests plus Aquascan).
 - [ ] G1.6 A `docs/feedback/1inch.md` worth reading, plus any protocol findings routed to HackenProof first.
 
@@ -120,6 +120,8 @@ Agreed 2026-09-07 evening, after M1 to M4 ran on the gym. Each step unblocks the
 9. **Predator versus defended maker** in the gym, recorded and scored: the pool-manipulation take against a flat-fee maker, then against ToxicityFee plus RiskCap.
 10. **Proof pieces**: root README for judges, the boundary document, feedback pages for The Graph and Ledger completed, the Graph composition story written explicitly; the repo flipped public here, not at the last hour. If time remains: the fillable-liquidity lane through The Graph's Token API as a second composition.
 11. **Video** (Kate and Raouf), from recorded runs and the live Arena page; feature freeze before it; submission form the morning before the deadline.
+
+Added 2026-09-08, after Raouf's question "what does SwapVM add": (a) **structural authoring**, the minds write instruction lists in the dialect and the compiler emits bytes (done; the decoded listing is the "AI wrote it" proof); (b) **the gate and direction-aware fees** for the defended maker of step 9 (done in the dialect; the raider is the engine's second taker); (c) **one inventory, three markets**, the multi-pair anchor with the triangle test and validator (done). These land before step 6, since the Base deployment ships the new router.
 
 Worst odds: the enrollment hack (fallback exists), minds producing boring knobs (step 1 is the remedy), Base needing enough hours of generations to look like an arena before the video (which is why step 6 precedes steps 8 to 10).
 
