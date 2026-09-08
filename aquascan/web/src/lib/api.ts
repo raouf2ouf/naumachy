@@ -54,7 +54,7 @@ export interface ArenaEntry {
 export interface ArenaGeneration { number: number; tape: string; opened_at: number; closed_at: number | null; champion: { address: string; name: string | null; strategy_hash: string | null; score_usd: number | null } | null; entries: ArenaEntry[] }
 export interface Arena { chain: Chain; configured: boolean; rollup_at?: string; generations: ArenaGeneration[]; gladiators: { address: string; name: string | null; generation_born: number; parent: { address: string; name: string | null } | null; registered_at: number; entries: number; wins: number }[]; promotions: { gladiator: string; name: string | null; strategy_hash: string; chain_id: number; bankroll: string; at: number; tx: string }[] }
 export interface ToolRead { tool: string; input: Record<string, unknown>; chars: number; ms: number }
-export interface GenerationEntry extends ArenaEntry { parent_line: { address: string; generation: number; knobs: Knobs } | null; rationale: string | null; transcript: ToolRead[]; draft: { usdcFor1Weth: string; wethFor1000Usdc: string } | null; program: string | null }
+export interface GenerationEntry extends ArenaEntry { parent_line: { address: string; generation: number; knobs: Knobs } | null; rationale: string | null; transcript: ToolRead[]; draft: { pairs?: Record<string, { sell: number; buy: number }>; loop?: { usdcIn: number; usdcOut: number } | null; sell?: number; buy?: number; usdcFor1Weth?: string; wethFor1000Usdc?: string } | null; program: string | null; listing: string[] | null; pairs: string[] | null; rejected: string[] }
 export interface GenerationDetail extends Omit<ArenaGeneration, "entries"> { chain: Chain; rollup_at: string; entries: GenerationEntry[] }
 
 const BASE = import.meta.env.VITE_API_URL ?? "";

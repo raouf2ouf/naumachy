@@ -27,7 +27,8 @@ const SWAPS_AT_QUERY = `query SwapsAt($pool: String!, $at: BigInt!, $first: Int!
 }`;
 
 const DAY = 86400;
-const ROUTE_TTL_S = 24 * 3600;             // routes are re-decided daily
+const ROUTE_TTL_S = Number(process.env.ROUTE_TTL_S ?? 24 * 3600);             // routes are re-decided daily (the gym shortens this: its pairs appear within minutes)
+const PAIR_MIN_VOLUME_USD = Number(process.env.PAIR_MIN_VOLUME_USD ?? 1000);    // a pair below this much priced volume in 30 days is not routed
 const PAGES_PER_POOL_PER_PASS = 60;        // a deep pool backfills over a few passes
 const BACKFILL_DAYS = 32;
 
@@ -102,7 +103,7 @@ async function routePairs(pool: Pool, gateway: Gateway, dex: DexConfig, stats: P
   const hubs = Object.values(dex.hubs);
   const routes: unknown[][] = []; const chosenPools = new Set<string>();
   for (const r of pairs) {
-    if (Number(r.volume) < 1000) continue;
+    if (Number(r.volume) < PAIR_MIN_VOLUME_USD) continue;
     const o = orient(r.x, rankOf(r.x), r.y, rankOf(r.y));
     const dense = tapePerHour(o.a, o.b);
     let route = chooseRoute(o.a, o.b, rankOf, tapePerHour, null, [], () => null);

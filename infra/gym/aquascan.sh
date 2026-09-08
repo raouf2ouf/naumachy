@@ -12,6 +12,8 @@ export AQUASCAN_API_PORT=3101
 export ARENA_SUBGRAPH=http://localhost:8100/subgraphs/name/naumachy/arena-gym
 export ARENA_CHAIN=base
 export POOL_MIN_SWAPS_30D=${POOL_MIN_SWAPS_30D:-1}     # the fork has hours of pool history, not a month
+export ROUTE_TTL_S=${ROUTE_TTL_S:-300}                 # pairs appear within minutes on the gym: re-decide routes every five
+export PAIR_MIN_VOLUME_USD=${PAIR_MIN_VOLUME_USD:-50}   # and route them long before a thousand dollars of volume
 export ENRICH_POLL_SECONDS=${ENRICH_POLL_SECONDS:-60}
 export LLAMA_CALLS_PER_PASS=${LLAMA_CALLS_PER_PASS:-100}
 case "${1:-}" in

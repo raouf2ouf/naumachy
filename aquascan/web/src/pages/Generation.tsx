@@ -20,7 +20,10 @@ function EntryCard({ e, closed, generation, names }: { e: GenerationEntry; close
   const parent = e.parent_line?.knobs ?? null;
   const who = (a: string) => names[a.toLowerCase()] ?? shortAddr(a);
   const parentName = e.parent_line ? (e.parent_line.address.toLowerCase() === e.gladiator.toLowerCase() ? "its own program" : `${who(e.parent_line.address)}'s program`) + ` of generation ${e.parent_line.generation}` : null;
-  const draft = e.draft ? { sell: Number(e.draft.usdcFor1Weth) / 1e6, buy: 1e21 / Number(e.draft.wethFor1000Usdc) } : null;
+  // the draft's prices per pair: the new files carry them per pair name, the first files WETH/USDC only
+  const draftPairs: [string, { sell: number; buy: number }][] = e.draft?.pairs ? Object.entries(e.draft.pairs)
+    : e.draft?.usdcFor1Weth ? [["WETH/USDC", { sell: Number(e.draft.usdcFor1Weth) / 1e6, buy: 1e21 / Number(e.draft.wethFor1000Usdc) }]] : [];
+  const loop = e.draft?.loop ?? null;
   return (
     <div className={`panel px-4 py-3 ${e.champion ? "border-bronze-deep" : ""}`}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
@@ -39,7 +42,14 @@ function EntryCard({ e, closed, generation, names }: { e: GenerationEntry; close
             </tbody>
           </table>
           {parentName && <p className="text-xs text-ink-faint mt-1.5">Compared with {parentName}; changed knobs in bronze.</p>}
-          {draft && <p className="text-xs text-ink-muted mt-2">Before shipping, on a private fork of the gym, this draft priced WETH at ${draft.sell.toFixed(2)} selling and ${draft.buy.toFixed(2)} buying.</p>}
+          {e.listing && e.listing.length > 0 && (
+            <div className="mt-3">
+              <div className="text-xs text-ink-muted mb-1">The program, as compiled{e.pairs && e.pairs.length ? ` (${e.pairs.join(", ")})` : ""}</div>
+              <pre className="text-[11px] mono leading-relaxed whitespace-pre overflow-x-auto bg-ink/5 rounded px-2 py-1.5">{e.listing.join("\n")}</pre>
+            </div>
+          )}
+          {draftPairs.length > 0 && <p className="text-xs text-ink-muted mt-2">Before shipping, on a private fork of the gym, this draft priced {draftPairs.map(([name, px]) => `${name} at ${px.sell.toFixed(2)} selling and ${px.buy.toFixed(2)} buying`).join("; ")}.{loop ? ` A 50 USDC loop through its three pairs came back as ${loop.usdcOut.toFixed(2)} USDC.` : ""}</p>}
+          {e.rejected && e.rejected.length > 0 && <p className="text-xs text-ink-faint mt-1">{e.rejected.length === 1 ? "One draft was refused first" : `${e.rejected.length} drafts were refused first`}: {e.rejected.map((r) => r.split(":")[0]).join("; ")}.</p>}
         </div>
         <div>
           {closed ? (

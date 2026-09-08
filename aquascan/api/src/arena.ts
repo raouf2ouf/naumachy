@@ -24,7 +24,7 @@ async function gql<T>(query: string): Promise<T> {
 const name = (hex: string | null | undefined) => (hex ? Buffer.from(hex.slice(2), "hex").toString("utf8").replace(/\0+$/, "") : null);
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
-interface GenFile { knobs: Record<string, unknown> & { rationale?: string; parent?: string | null }; mind?: string; transcript?: unknown[]; draft?: unknown; program?: string; blob?: string; strategyHash?: string }
+interface GenFile { knobs: Record<string, unknown> & { rationale?: string; parent?: string | null }; mind?: string; transcript?: unknown[]; draft?: unknown; program?: string; blob?: string; strategyHash?: string; listing?: string[]; pairs?: string[]; rejected?: string[] }
 function genFile(generation: number, address: string): GenFile | null {
   const f = `${DIR}${generation}-${address.toLowerCase()}.json`;
   if (!existsSync(f)) return null;
@@ -112,6 +112,7 @@ export async function generation(pool: Pool, number: number) {
         rationale: closed ? f?.knobs?.rationale ?? null : null,
         transcript: closed ? f?.transcript ?? [] : [],
         draft: f?.draft ?? null, program: f?.program ?? null,
+        listing: f?.listing ?? null, pairs: f?.pairs ?? null, rejected: closed ? f?.rejected ?? [] : [],
       };
     }),
   };
