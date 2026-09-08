@@ -10,8 +10,8 @@ const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
 
 // Evolution: G generations in a row. Each one the lanista opens, every gladiator's mind reads the
 // results so far and writes its next program, the taker engine trades them for GEN_MINUTES, Aquascan
-// scores them, the lanista attests, crowns and closes. Minds see the champion's knobs and rationale
-// through the generation files, so losers can copy and mutate; lineage goes on chain as `parent`.
+// scores them, the lanista attests, crowns and closes. Minds see every program (bytes on chain,
+// listed in the dialect) and the champion's, so losers can copy and mutate; lineage goes on chain as `parent`.
 async function main() {
   const cfg = loadConfig();
   const client = new Anthropic();
@@ -23,7 +23,6 @@ async function main() {
   const rounds = Number(process.env.GENERATIONS ?? 2); const minutes = Number(process.env.GEN_MINUTES ?? 8);
   const roster: { name: string; key: Hex }[] = (process.env.GLADIATORS ?? "steady:0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,tight:0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6,wide:0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a,flat:0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba")
     .split(",").map((s) => { const [name, key] = s.split(":"); return { name, key: key as Hex }; });
-  const ledger: [bigint, bigint] = [BigInt(process.env.GEN_LEDGER_WETH ?? "1000000000000000000"), BigInt(process.env.GEN_LEDGER_USDC ?? "2500000000")];
 
   for (let round = 0; round < rounds; round += 1) {
     // a generation left open by an earlier run is reused, never abandoned
@@ -34,7 +33,7 @@ async function main() {
     const entries: { name: string; address: Address; hash: Hex }[] = [];
     for (const g of roster) {
       try {
-        const r = await runGladiator(cfg, client, g.key, g.name, api, arena, ledger);
+        const r = await runGladiator(cfg, client, g.key, g.name, api, arena);
         entries.push({ name: r.name, address: r.address, hash: r.strategyHash });
       } catch (err) { log(`${g.name} sits this one out: ${String(err).slice(0, 200)}`); }
     }
