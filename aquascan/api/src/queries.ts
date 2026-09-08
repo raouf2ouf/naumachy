@@ -128,6 +128,7 @@ export async function overview(pool: Pool, window: string | null, chain: string 
   const feeVolume = tiers.reduce((s, t) => s + Number(t.volume ?? 0), 0);
   const weighted = tiers.filter((t) => t.maker_fee_bps !== null).reduce((s, t) => s + Number(t.maker_fee_bps) * Number(t.volume ?? 0), 0);
   const weightedVolume = tiers.filter((t) => t.maker_fee_bps !== null).reduce((s, t) => s + Number(t.volume ?? 0), 0);
+  const topPairs = await deskPairs(pool, top.map((d) => ({ chain: d.chain as string, desk: d.desk as string })));
   return {
     window: w.name, chain: c ?? "all", rollup_at: at.toISOString(),
     hero: { economic_fills: Number(cnt.fills), strategies_active: Number(cnt.strategies), ...scored(h, ratio(cnt.priced, cnt.fills), Number(h.tape_ratio), at) },
@@ -138,7 +139,7 @@ export async function overview(pool: Pool, window: string | null, chain: string 
     },
     totals: { strategies: Number(tot.strategies), live: Number(tot.live), desks: Number(tot.desks), makers: Number(tot.makers) },
     chains: chains.map((r) => ({ chain: r.chain, fills: Number(r.fills), volume_usd: priced(r.volume, r.priced_ratio, at, HOURLY), edge_usd: priced(r.edge, r.priced_ratio, at, refSource(r.tape_ratio)), markout_1h_usd: priced(r.markout_1h, r.priced_ratio, at, refSource(r.tape_ratio)) })),
-    top_desks: top.map((d) => ({ chain: d.chain, desk: d.desk, maker: d.maker, maker_label: d.maker_label ?? null, template: d.template, template_name: d.template_name ?? null, fills: Number(d.fills),
+    top_desks: top.map((d) => ({ chain: d.chain, desk: d.desk, maker: d.maker, maker_label: d.maker_label ?? null, template: d.template, template_name: d.template_name ?? null, fills: Number(d.fills), pairs: topPairs.get(`${d.chain}:${d.desk}`) ?? [],
       maker_fee_bps: num(d.maker_fee_bps), ...scored(d, d.priced_ratio, Number(d.tape_ratio), at) })),
     latest_ships: ships.map((s) => ({ chain: s.chain, id: s.id, maker: s.maker, desk: s.desk, template: s.template, template_name: s.template_name ?? null, registry: s.registry, shipped_at: Number(s.shipped_at), shipped_tx: s.shipped_tx, status: s.status })),
   };
@@ -170,7 +171,33 @@ export async function desks(pool: Pool, chain: string | null, sort: string | nul
     LEFT JOIN templates tp ON tp.chain = d.chain AND tp.id = d.template
     LEFT JOIN labels lb ON (lb.chain = '*' OR lb.chain = d.chain) AND lb.address = d.maker
     WHERE coalesce(d.volume_usd, 0) >= $2 AND ($3::text IS NULL OR d.chain = $3) ORDER BY ${by} LIMIT $1`, [limit, minVolume, c]);
-  return rows.map((d) => deskRow(d, at));
+  const pairs = await deskPairs(pool, rows.map((d) => ({ chain: d.chain as string, desk: d.desk as string })));
+  return rows.map((d) => ({ ...deskRow(d, at), pairs: pairs.get(`${d.chain}:${d.desk}`) ?? [] }));
+}
+
+export interface DeskPair { base_token: string; quote_token: string; base_symbol: string | null; quote_symbol: string | null; fills: number; share: number }
+
+// The top pairs of each desk in a list, by priced volume, with each pair's share of the desk's priced volume.
+export async function deskPairs(pool: Pool, keys: { chain: string; desk: string }[], top = 3): Promise<Map<string, DeskPair[]>> {
+  const out = new Map<string, DeskPair[]>();
+  if (!keys.length) return out;
+  const { rows } = await pool.query(`
+    SELECT p.chain, p.desk, p.base_token, p.quote_token, p.fills, p.volume_usd, tb.symbol AS base_symbol, tq.symbol AS quote_symbol
+    FROM desk_pairs p
+    LEFT JOIN tokens tb ON tb.chain = p.chain AND tb.address = p.base_token
+    LEFT JOIN tokens tq ON tq.chain = p.chain AND tq.address = p.quote_token
+    WHERE (p.chain || ':' || p.desk) = ANY($1::text[])
+    ORDER BY p.volume_usd DESC NULLS LAST, p.fills DESC`, [keys.map((k) => `${k.chain}:${k.desk}`)]);
+  const totals = new Map<string, number>();
+  for (const r of rows) { const k = `${r.chain}:${r.desk}`; totals.set(k, (totals.get(k) ?? 0) + Number(r.volume_usd ?? 0)); }
+  for (const r of rows) {
+    const k = `${r.chain}:${r.desk}`; const list = out.get(k) ?? [];
+    if (list.length >= top) continue;
+    const total = totals.get(k) ?? 0;
+    list.push({ base_token: r.base_token, quote_token: r.quote_token, base_symbol: r.base_symbol ?? null, quote_symbol: r.quote_symbol ?? null, fills: Number(r.fills), share: total > 0 ? Number(r.volume_usd ?? 0) / total : 0 });
+    out.set(k, list);
+  }
+  return out;
 }
 
 function deskRow(d: Record<string, unknown>, at: Date) {
@@ -193,6 +220,7 @@ export async function desk(pool: Pool, chain: string, id: string, offset = 0, li
     LEFT JOIN labels lb ON (lb.chain = '*' OR lb.chain = d.chain) AND lb.address = d.maker
     WHERE d.chain = $1 AND d.desk = $2`, [chain, id]);
   if (!d) return null;
+  const pairs = (await deskPairs(pool, [{ chain, desk: id }], 6)).get(`${chain}:${id}`) ?? [];
   const { rows: [fees] } = await pool.query(`
     SELECT count(*) FILTER (WHERE sf.decoded) AS decoded, count(*) AS strategies,
            array_agg(DISTINCT sf.maker_fee_kind) FILTER (WHERE sf.maker_fee_kind IS NOT NULL) AS maker_kinds,
@@ -217,7 +245,7 @@ export async function desk(pool: Pool, chain: string, id: string, offset = 0, li
     LEFT JOIN fill_values v ON v.chain = f.chain AND v.fill_id = f.id
     WHERE f.chain = $1 AND s.desk = $2 AND f.economic ORDER BY f.ts DESC LIMIT 50`, [chain, id]);
   return {
-    ...deskRow(d, at),
+    ...deskRow(d, at), pairs,
     instructions: (d.instructions as string[] | null) ?? null,
     strategies_total: Number(d.strategies),
     fees: {

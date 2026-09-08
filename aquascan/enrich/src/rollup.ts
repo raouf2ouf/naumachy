@@ -398,6 +398,17 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
       LEFT JOIN d_prec dp ON dp.chain = s.chain AND dp.desk = s.desk
       GROUP BY s.chain, s.desk, s.maker, s.template, dp.m5, dp.m5_se, dp.m1h, dp.m1h_se`);
 
+    // 5b. what each desk trades: the pair tape's two-sided fills grouped by desk and pair
+    await client.query(`DELETE FROM desk_pairs`);
+    await client.query(`
+      INSERT INTO desk_pairs (chain, desk, base_token, quote_token, fills, volume_usd)
+      SELECT t.chain, s.desk, t.a, t.b, count(*), sum(fv.volume_usd) FILTER (WHERE fv.priced)
+      FROM tf t
+      JOIN fills f ON f.chain = t.chain AND f.id = t.fill_id
+      JOIN strategies s ON s.chain = f.chain AND s.id = f.strategy_id
+      LEFT JOIN fill_values fv ON fv.chain = t.chain AND fv.fill_id = t.fill_id
+      GROUP BY t.chain, s.desk, t.a, t.b`);
+
     // 6. daily stats
     await client.query(`DELETE FROM daily_stats`);
     await client.query(`
