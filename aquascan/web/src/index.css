@@ -111,7 +111,7 @@ tbody tr:hover { background: var(--color-water-800); }
 .desk-cell { display: inline-flex; flex-direction: column; gap: 2px; line-height: 1.35; }
 .desk-who { display: inline-flex; align-items: center; gap: 8px; }
 .desk-what { display: inline-flex; align-items: baseline; gap: 12px; font-size: 12.5px; white-space: nowrap; }
-.desk-kind { color: var(--color-ink-faint); font-size: 12.5px; }
+.desk-kind { color: var(--color-ink-faint); font-size: 12.5px; max-width: 44ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sub { display: block; color: var(--color-ink-faint); font-size: 12px; margin-top: 1px; }
 .desk-cell:hover .mono, .desk-cell:hover .pair { color: var(--color-bronze); }
 .pairs { display: inline-flex; gap: 10px; align-items: baseline; }

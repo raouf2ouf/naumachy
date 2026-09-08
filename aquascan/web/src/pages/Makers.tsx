@@ -1,22 +1,22 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, CHAINS, type Chain, type DeskRow } from "../lib/api";
+import { api, CHAINS, type Chain, type MakerRow } from "../lib/api";
 import { bandText, bps, CHAIN_NAME, compact, feeBps } from "../lib/format";
-import { DeskLink, Failed, Loading, Money, PageHeader, Provenance, Segmented, When } from "../components/ui";
+import { Failed, Loading, MakerLink, Money, PageHeader, Provenance, Segmented, When } from "../components/ui";
 
 const SORTS: [string, string][] = [["volume", "volume"], ["edge", "edge at fill"], ["markout", "worst after 1 h"], ["adverse", "most adverse flow"], ["fees", "fee income"], ["fills", "fills"], ["recent", "recently active"]];
 
 export type Highlight = "m5" | "edge" | "m1h";
-export function DeskTable({ rows, rank = false, highlight = "m5" }: { rows: DeskRow[]; rank?: boolean; highlight?: Highlight }) {
+export function MakerTable({ rows, rank = false, highlight = "m5" }: { rows: MakerRow[]; rank?: boolean; highlight?: Highlight }) {
   return (
     <div className="overflow-x-auto panel">
       <table>
-        <thead><tr>{rank && <th>#</th>}<th>Desk</th><th className="num">Strategies</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th>{highlight === "m1h" && <th className="num">Marked 1 h later</th>}<th className="num">Last active</th></tr></thead>
+        <thead><tr>{rank && <th>#</th>}<th>Maker</th><th className="num">Strategies</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th>{highlight === "m1h" && <th className="num">Marked 1 h later</th>}<th className="num">Last active</th></tr></thead>
         <tbody>
           {rows.map((d, i) => (
-            <tr key={d.chain + d.desk}>
+            <tr key={d.chain + d.maker}>
               {rank && <td className="text-ink-faint">{i + 1}</td>}
-              <td><DeskLink chain={d.chain} desk={d.desk} maker={d.maker} makerLabel={d.maker_label} templateName={d.template_name} pairs={d.pairs} /></td>
+              <td><MakerLink chain={d.chain} maker={d.maker} makerLabel={d.maker_label} templates={d.templates} pairs={d.pairs} /></td>
               <td className="num"><span className="gain">{d.live}</span><span className="text-ink-faint"> / {d.strategies}</span></td>
               <td className="num">{compact(d.fills, 0)}</td>
               <td className="num"><Money p={d.volume_usd} /></td>
@@ -27,7 +27,7 @@ export function DeskTable({ rows, rank = false, highlight = "m5" }: { rows: Desk
               <td className="num text-ink-muted"><When ts={d.last_seen} /></td>
             </tr>
           ))}
-          {rows.length === 0 && <tr><td colSpan={rank ? 10 : 9} className="text-ink-muted">No desks match.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={rank ? 10 : 9} className="text-ink-muted">No makers match.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -38,19 +38,19 @@ export function ChainFilter({ value, onChange }: { value: Chain | null; onChange
   return <Segmented value={value ?? "all"} onChange={(v) => onChange(v === "all" ? null : (v as Chain))} label="Chain" options={[["all", "all chains"], ...CHAINS.map((c) => [c, CHAIN_NAME[c]] as [string, string])]} />;
 }
 
-export function Desks() {
+export function Makers() {
   const [chain, setChain] = useState<Chain | null>(null);
   const [sort, setSort] = useState("volume");
-  const q = useQuery({ queryKey: ["desks", chain, sort], queryFn: () => api.desks(chain, sort, 100) });
+  const q = useQuery({ queryKey: ["makers", chain, sort], queryFn: () => api.makers(chain, sort, 100) });
   return (
     <div className="fade">
-      <PageHeader title="Desks" description={<>A desk is one maker running one strategy template on one chain, across every instance it shipped. Numbers are all time; the leaderboard ranks them. The edge five minutes after a fill is the honest one: the same trade, re-marked once the market has re-priced. The band is one standard error from the desk's own fills.</>} />
+      <PageHeader title="Makers" description={<>A maker is a wallet that ships strategies to Aqua. Each row is one maker on one chain, across every strategy it shipped there, all time. The edge five minutes after a fill is the honest one: the same trade, re-marked once the market has re-priced. The band is one standard error from the maker's own fills.</>} />
       <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
         <ChainFilter value={chain} onChange={setChain} />
         <Segmented value={sort} onChange={setSort} label="Sort" options={SORTS.map(([k, label]) => [k, label] as [string, string])} />
       </div>
       <div className="mt-4">
-        {q.isPending ? <Loading what="desks" /> : q.isError ? <Failed what="desks" error={q.error} /> : <DeskTable rows={q.data} highlight={sort === "edge" ? "edge" : sort === "markout" || sort === "adverse" ? "m1h" : "m5"} />}
+        {q.isPending ? <Loading what="makers" /> : q.isError ? <Failed what="makers" error={q.error} /> : <MakerTable rows={q.data} highlight={sort === "edge" ? "edge" : sort === "markout" || sort === "adverse" ? "m1h" : "m5"} />}
       </div>
       {q.data && <Provenance at={q.data[0]?.volume_usd.at ?? new Date().toISOString()} />}
     </div>

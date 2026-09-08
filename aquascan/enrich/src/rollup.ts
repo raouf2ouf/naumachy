@@ -401,13 +401,43 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
     // 5b. what each desk trades: the pair tape's two-sided fills grouped by desk and pair
     await client.query(`DELETE FROM desk_pairs`);
     await client.query(`
-      INSERT INTO desk_pairs (chain, desk, base_token, quote_token, fills, volume_usd)
-      SELECT t.chain, s.desk, t.a, t.b, count(*), sum(fv.volume_usd) FILTER (WHERE fv.priced)
+      INSERT INTO desk_pairs (chain, desk, maker, base_token, quote_token, fills, volume_usd)
+      SELECT t.chain, s.desk, s.maker, t.a, t.b, count(*), sum(fv.volume_usd) FILTER (WHERE fv.priced)
       FROM tf t
       JOIN fills f ON f.chain = t.chain AND f.id = t.fill_id
       JOIN strategies s ON s.chain = f.chain AND s.id = f.strategy_id
       LEFT JOIN fill_values fv ON fv.chain = t.chain AND fv.fill_id = t.fill_id
-      GROUP BY t.chain, s.desk, t.a, t.b`);
+      GROUP BY t.chain, s.desk, s.maker, t.a, t.b`);
+
+    // 5c. maker stats: one row per maker and chain, the level where the inventory lives
+    await client.query(`
+      CREATE TEMP TABLE m_prec ON COMMIT DROP AS
+      SELECT chain, maker, ${ratioStats("markout_5m_usd", "m5")}, ${ratioStats("markout_1h_usd", "m1h")}
+      FROM (SELECT fv.*, s.maker FROM fill_values fv JOIN strategies s ON s.chain = fv.chain AND s.id = fv.strategy_id WHERE fv.priced AND fv.volume_usd > 0) x
+      GROUP BY chain, maker`);
+    await client.query(`DELETE FROM maker_stats`);
+    await client.query(`
+      INSERT INTO maker_stats (chain, maker, templates, strategies, live, fills, volume_usd, edge_usd, markout_1h_usd, markout_24h_usd,
+        pnl_usd_marked, priced_ratio, first_seen, last_seen,
+        markout_5m_usd, drift_1h_usd, drift_24h_usd, protocol_fee_usd, maker_fee_usd, tape_fills, maker_fee_bps, maker_fee_bps_min, maker_fee_bps_max,
+        markout_5m_bps, markout_5m_bps_se, markout_1h_bps, markout_1h_bps_se)
+      SELECT s.chain, s.maker, count(DISTINCT s.template), count(DISTINCT s.id), count(DISTINCT s.id) FILTER (WHERE s.status = 'LIVE'),
+             coalesce(sum(st.fills), 0), sum(st.volume_usd), sum(st.edge_usd), sum(st.markout_1h_usd), sum(st.markout_24h_usd),
+             sum(st.pnl_usd_marked),
+             CASE WHEN sum(st.fills) > 0 THEN sum(st.priced_fills)::float4 / sum(st.fills)::float4 ELSE 0 END,
+             min(s.shipped_at), greatest(max(s.shipped_at), max(st.last_fill_ts), max(s.docked_at)),
+             sum(st.markout_5m_usd), sum(st.drift_1h_usd), sum(st.drift_24h_usd), sum(st.protocol_fee_usd), sum(st.maker_fee_usd),
+             coalesce(sum(st.tape_fills), 0),
+             CASE WHEN sum(st.volume_usd) FILTER (WHERE sf.maker_fee_bps IS NOT NULL) > 0
+                  THEN sum(st.volume_usd * sf.maker_fee_bps) FILTER (WHERE sf.maker_fee_bps IS NOT NULL) / sum(st.volume_usd) FILTER (WHERE sf.maker_fee_bps IS NOT NULL)
+                  ELSE min(sf.maker_fee_bps) END,
+             min(sf.maker_fee_bps), max(sf.maker_fee_bps),
+             mp.m5, mp.m5_se, mp.m1h, mp.m1h_se
+      FROM strategies s
+      LEFT JOIN strategy_stats st ON st.chain = s.chain AND st.strategy_id = s.id
+      LEFT JOIN strategy_fees sf ON sf.chain = s.chain AND sf.strategy_id = s.id
+      LEFT JOIN m_prec mp ON mp.chain = s.chain AND mp.maker = s.maker
+      GROUP BY s.chain, s.maker, mp.m5, mp.m5_se, mp.m1h, mp.m1h_se`);
 
     // 6. daily stats
     await client.query(`DELETE FROM daily_stats`);

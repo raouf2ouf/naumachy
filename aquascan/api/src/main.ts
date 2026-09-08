@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import pg from "pg";
-import { health, overview, series, desks, desk, strategy, search, rollupAt } from "./queries.js";
+import { health, overview, series, desks, desk, makers, maker, strategy, search, rollupAt } from "./queries.js";
 import { arena, generation } from "./arena.js";
 
 const pool = new pg.Pool({ connectionString: process.env.AQUASCAN_DATABASE_URL ?? "postgres://aquascan:aquascan@localhost:5433/aquascan", max: 8 });
@@ -39,7 +39,9 @@ const routes: [RegExp, Handler][] = [
   [/^\/api\/overview$/, (u) => cachedOverview(u.searchParams.get("window"), u.searchParams.get("chain"))],
   [/^\/api\/series$/, (u) => series(pool, u.searchParams.get("window"), u.searchParams.get("chain"))],
   [/^\/api\/desks$/, (u) => desks(pool, u.searchParams.get("chain"), u.searchParams.get("sort"), Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 0))],
-  [/^\/api\/leaderboard$/, (u) => desks(pool, u.searchParams.get("chain"), u.searchParams.get("sort") ?? "edge", Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 1000))],
+  [/^\/api\/leaderboard$/, (u) => makers(pool, u.searchParams.get("chain"), u.searchParams.get("sort") ?? "edge", Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 1000))],
+  [/^\/api\/makers$/, (u) => makers(pool, u.searchParams.get("chain"), u.searchParams.get("sort"), Math.min(200, Number(u.searchParams.get("limit") ?? 50)), Number(u.searchParams.get("minVolume") ?? 0))],
+  [/^\/api\/maker\/([a-z]+)\/(0x[0-9a-fA-F]{40})$/, (u, [chain, address]) => maker(pool, chain, address, Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/desk\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => desk(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/strategy\/([a-z]+)\/([^/]+)$/, (u, [chain, id]) => strategy(pool, chain, decodeURIComponent(id), Number(u.searchParams.get("offset") ?? 0), Math.min(200, Number(u.searchParams.get("limit") ?? 50)))],
   [/^\/api\/search$/, (u) => search(pool, u.searchParams.get("q") ?? "")],

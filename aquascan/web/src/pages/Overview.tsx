@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { bandText, CHAIN_NAME, compact, feeBps, percent, relTime, shortAddr, usd } from "../lib/format";
 import { VolumeChart } from "../components/Chart";
-import { ChainChip, DeskLink, EdgeCell, Failed, Loading, Money, Provenance, RegistryChip, Section, When, Windows } from "../components/ui";
+import { ChainChip, EdgeCell, Failed, Loading, MakerLink, Money, Provenance, RegistryChip, Section, When, Windows } from "../components/ui";
 
 const WINDOW_TEXT: Record<string, string> = { "24h": "the last 24 hours", "7d": "the last 7 days", "30d": "the last 30 days", all: "all of its history" };
 
@@ -12,7 +12,7 @@ export function Overview() {
   const [window, setWindow] = useState("30d");
   const ov = useQuery({ queryKey: ["overview", window], queryFn: () => api.overview(window, null) });
   const se = useQuery({ queryKey: ["series", window], queryFn: () => api.series(window, null) });
-  const bleeding = useQuery({ queryKey: ["bleeding"], queryFn: () => api.desks(null, "markout", 5, 10000) });
+  const bleeding = useQuery({ queryKey: ["bleeding"], queryFn: () => api.makers(null, "markout", 5, 10000) });
 
   if (ov.isPending) return <Loading what="the pulse" />;
   if (ov.isError) return <Failed what="the overview" error={ov.error} />;
@@ -31,7 +31,7 @@ export function Overview() {
         <div className="hero-stat">
           <div className="l" title="Programs shipped to Aqua and still quoting">Strategies live</div>
           <div className="v">{compact(o.totals.live, 0)}</div>
-          <div className="b">{compact(o.totals.desks, 0)} desks, {compact(o.totals.makers, 0)} makers</div>
+          <div className="b">{compact(o.totals.makers, 0)} makers, {compact(o.totals.strategies, 0)} strategies ever shipped</div>
         </div>
         <div className="hero-stat">
           <div className="l">Traded, {WINDOW_TEXT[window]}</div>
@@ -66,20 +66,20 @@ export function Overview() {
             <span className="primary"><span className="l">5 minutes later</span><span className="v">{tilde}{usd(h.markout_5m_usd.value, true)}</span></span>
             {h.markout_1h_usd.value !== null && <span><span className="l">1 hour later</span><span className="v">{tilde}{usd(h.markout_1h_usd.value, true)}</span></span>}
             {h.markout_24h_usd.value !== null && <span><span className="l">1 day later</span><span className="v">{tilde}{usd(h.markout_24h_usd.value, true)}</span></span>}
-            <span className="horizons-note">Negative means the market moved against the makers after they traded. {compact(o.totals.strategies, 0)} strategies have been shipped since the registries began.</span>
+            <span className="horizons-note">Negative means the market moved against the makers after they traded.</span>
           </p>
         )}
       </div>
 
-      <Section title={`Top desks by volume, ${window === "all" ? "all time" : window}`} description="A desk is one maker running one strategy template on one chain." aside={<Link to="/desks">All desks</Link>}>
+      <Section title={`Top makers by volume, ${window === "all" ? "all time" : window}`} description="A maker is a wallet that ships strategies to Aqua; one row per maker and chain." aside={<Link to="/makers">All makers</Link>}>
         <div className="overflow-x-auto panel">
           <table>
-            <thead><tr><th>#</th><th>Desk</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th></tr></thead>
+            <thead><tr><th>#</th><th>Maker</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th></tr></thead>
             <tbody>
-              {o.top_desks.map((d, i) => (
-                <tr key={d.chain + d.desk}>
+              {o.top_makers.map((d, i) => (
+                <tr key={d.chain + d.maker}>
                   <td className="text-ink-faint">{i + 1}</td>
-                  <td><DeskLink chain={d.chain} desk={d.desk} maker={d.maker} makerLabel={d.maker_label} templateName={d.template_name} pairs={d.pairs} /></td>
+                  <td><MakerLink chain={d.chain} maker={d.maker} makerLabel={d.maker_label} templates={d.templates} pairs={d.pairs} /></td>
                   <td className="num">{compact(d.fills, 0)}</td>
                   <td className="num"><Money p={d.volume_usd} /></td>
                   <td className="num"><Money p={d.maker_fee_usd} className="fee" /><span className="sub">{feeBps(d.maker_fee_bps)}</span></td>
@@ -87,7 +87,7 @@ export function Overview() {
                   <td className="num text-ink-muted"><EdgeCell edge={d.edge_usd} volume={d.volume_usd} /></td>
                 </tr>
               ))}
-              {o.top_desks.length === 0 && <tr><td colSpan={8} className="text-ink-muted">No priced fills in this window yet.</td></tr>}
+              {o.top_makers.length === 0 && <tr><td colSpan={7} className="text-ink-muted">No priced fills in this window yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -95,11 +95,11 @@ export function Overview() {
 
       <div className="section grid gap-8 md:grid-cols-[1.2fr_1.4fr_1fr]">
         <div>
-          <div className="section-head"><div><h2>Bleeding desks</h2><p className="section-desc">Worst result one hour after filling, among desks with over $10K of volume.</p></div></div>
+          <div className="section-head"><div><h2>Bleeding makers</h2><p className="section-desc">Worst result one hour after filling, among makers with over $10K of volume.</p></div></div>
           <div className="list">
             {bleeding.data?.map((d) => (
-              <div key={d.chain + d.desk} className="flex items-center justify-between px-1 py-2.5">
-                <DeskLink chain={d.chain} desk={d.desk} maker={d.maker} />
+              <div key={d.chain + d.maker} className="flex items-center justify-between px-1 py-2.5">
+                <MakerLink chain={d.chain} maker={d.maker} makerLabel={d.maker_label} />
                 <Money p={d.markout_1h_usd} signed colored />
               </div>
             ))}

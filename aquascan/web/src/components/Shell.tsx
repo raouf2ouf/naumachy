@@ -4,7 +4,7 @@ import { ThemeToggle } from "./ui";
 
 const nav = [
   { to: "/", label: "Overview", end: true },
-  { to: "/desks", label: "Desks" },
+  { to: "/makers", label: "Makers" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/arena", label: "Arena" },
   { to: "/status", label: "Status" },
@@ -33,7 +33,7 @@ export function Shell() {
         <form className="searchbar" role="search" onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 3) navigate(`/search?q=${encodeURIComponent(q.trim())}`); }}>
           <label className="search">
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M10.5 10.5 14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a maker address, a strategy hash or a desk" aria-label="Search" spellCheck={false} autoComplete="off" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a maker address or a strategy hash" aria-label="Search" spellCheck={false} autoComplete="off" />
             <span className="search-hint" aria-hidden="true">Enter</span>
           </label>
         </form>

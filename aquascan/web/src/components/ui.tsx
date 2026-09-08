@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { Chain, DeskPair, Priced } from "../lib/api";
+import type { Chain, DeskPair, MakerTemplate, Priced } from "../lib/api";
 import { CHAIN_HUE, CHAIN_NAME, REGISTRY_CANONICAL, absTime, bps, relTime, shortAddr, usd } from "../lib/format";
 
 export function ChainChip({ chain }: { chain: Chain }) {
@@ -48,16 +48,17 @@ export function When({ ts, className = "" }: { ts: number | null | undefined; cl
   return <span className={className} title={absTime(ts)}>{relTime(ts)}</span>;
 }
 
-// A desk in a table: who and where on the first line, what it trades on the second, the template in faint.
-export function DeskLink({ chain, desk, maker, makerLabel, templateName, pairs, className = "" }: { chain: Chain; desk: string; maker: string; makerLabel?: string | null; templateName?: string | null; pairs?: DeskPair[]; className?: string }) {
+// A maker in a table: who and where on the first line, what it trades on the second, its templates in faint.
+export function MakerLink({ chain, maker, makerLabel, templates, pairs, className = "" }: { chain: Chain; maker: string; makerLabel?: string | null; templates?: MakerTemplate[]; pairs?: DeskPair[]; className?: string }) {
+  const kinds = (templates ?? []).map((t) => t.name ?? "unnamed template");
   return (
-    <Link to={`/desk/${chain}/${encodeURIComponent(desk)}`} className={`desk-cell ${className}`}>
+    <Link to={`/maker/${chain}/${maker}`} className={`desk-cell ${className}`}>
       <span className="desk-who">
         {makerLabel ? <span className="font-medium">{makerLabel}</span> : <span className="mono">{shortAddr(maker)}</span>}
         <ChainChip chain={chain} />
       </span>
       {pairs && <span className="desk-what"><Pairs pairs={pairs} /></span>}
-      {templateName && <span className="desk-kind">{templateName}</span>}
+      {kinds.length > 0 && <span className="desk-kind" title={kinds.join("; ")}>{kinds.slice(0, 2).join("; ")}{kinds.length > 2 ? ` and ${kinds.length - 2} more` : ""}</span>}
     </Link>
   );
 }
@@ -135,7 +136,7 @@ export function Provenance({ at, extra }: { at: string; extra?: string }) {
   return <footer className="provenance">Chain data from six subgraphs on The Graph Network. Reference prices are the venue's own fills by the minute, or the pair's deepest pool on the same chain when the tape is thin; DefiLlama's hourly prices turn them into dollars and stand in where neither exists. Rolled up {relTime(d.getTime() / 1000)}. Only economic fills count.{extra ? ` ${extra}` : ""} <Link to="/status">Status</Link></footer>;
 }
 
-// What a desk trades: its top pairs by volume, each with its share of the desk's priced volume.
+// What a maker trades: its top pairs by volume, each with its share of the maker's priced volume.
 export function Pairs({ pairs, max = 2, className = "" }: { pairs?: DeskPair[]; max?: number; className?: string }) {
   if (!pairs || pairs.length === 0) return <span className={`text-ink-faint ${className}`}>no two-sided fills</span>;
   const shown = pairs.slice(0, max); const rest = pairs.length - shown.length;

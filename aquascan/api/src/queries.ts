@@ -101,20 +101,20 @@ export async function overview(pool: Pool, window: string | null, chain: string 
     WHERE v.priced AND v.ts >= $1 AND ($2::text IS NULL OR v.chain = $2)
     GROUP BY sf.protocol_fee_to, sf.protocol_fee_kind HAVING sum(v.volume_usd) >= 100 ORDER BY fee_usd DESC NULLS LAST LIMIT 4`, [since, c]);
   const { rows: top } = await pool.query(`
-    SELECT s.chain, s.desk, s.maker, s.template, tp.name AS template_name, lb.label AS maker_label, count(*) AS fills,
+    SELECT v.chain, s.maker, lb.label AS maker_label, count(*) AS fills,
            sum(v.volume_usd) FILTER (WHERE v.priced) AS volume_usd, sum(v.edge_usd) FILTER (WHERE v.priced) AS edge_usd,
-           sum(v.markout_5m_usd) AS markout_5m_usd, sum(v.markout_1h_usd) AS markout_1h_usd, sum(v.markout_24h_usd) AS markout_24h_usd,
-           sum(v.drift_1h_usd) AS drift_1h_usd, sum(v.drift_24h_usd) AS drift_24h_usd,
-           sum(v.protocol_fee_usd) AS protocol_fee_usd, sum(v.maker_fee_usd) AS maker_fee_usd, d.maker_fee_bps,
+           sum(v.markout_5m_usd) FILTER (WHERE v.priced) AS markout_5m_usd, sum(v.markout_1h_usd) FILTER (WHERE v.priced) AS markout_1h_usd,
+           sum(v.markout_24h_usd) FILTER (WHERE v.priced) AS markout_24h_usd, sum(v.drift_1h_usd) FILTER (WHERE v.priced) AS drift_1h_usd,
+           sum(v.drift_24h_usd) FILTER (WHERE v.priced) AS drift_24h_usd,
+           sum(v.protocol_fee_usd) FILTER (WHERE v.priced) AS protocol_fee_usd, sum(v.maker_fee_usd) FILTER (WHERE v.priced) AS maker_fee_usd, m.maker_fee_bps,
            (count(*) FILTER (WHERE v.priced))::float4 / count(*)::float4 AS priced_ratio,
            (count(*) FILTER (WHERE v.ref_kind = 'tape'))::float4 / greatest(count(*) FILTER (WHERE v.priced), 1)::float4 AS tape_ratio,
            ${ratioBps("v.markout_5m_usd", "markout_5m_bps", "v.volume_usd")}, ${ratioBps("v.markout_1h_usd", "markout_1h_bps", "v.volume_usd")}
-    FROM fill_values v JOIN strategy_stats s ON s.chain = v.chain AND s.strategy_id = v.strategy_id
-    LEFT JOIN desk_stats d ON d.chain = s.chain AND d.desk = s.desk
-    LEFT JOIN templates tp ON tp.chain = s.chain AND tp.id = s.template
+    FROM fill_values v JOIN strategies s ON s.chain = v.chain AND s.id = v.strategy_id
+    LEFT JOIN maker_stats m ON m.chain = s.chain AND m.maker = s.maker
     LEFT JOIN labels lb ON (lb.chain = '*' OR lb.chain = s.chain) AND lb.address = s.maker
     WHERE v.ts >= $1 AND ($2::text IS NULL OR v.chain = $2)
-    GROUP BY s.chain, s.desk, s.maker, s.template, tp.name, lb.label, d.maker_fee_bps ORDER BY volume_usd DESC NULLS LAST LIMIT 5`, [since, c]);
+    GROUP BY v.chain, s.maker, lb.label, m.maker_fee_bps ORDER BY volume_usd DESC NULLS LAST LIMIT 5`, [since, c]);
   const { rows: ships } = await pool.query(`
     SELECT s.chain, s.id, s.maker, s.desk, s.template, tp.name AS template_name, s.registry, s.shipped_at, s.shipped_tx, s.status FROM strategies s
     LEFT JOIN templates tp ON tp.chain = s.chain AND tp.id = s.template
@@ -128,7 +128,8 @@ export async function overview(pool: Pool, window: string | null, chain: string 
   const feeVolume = tiers.reduce((s, t) => s + Number(t.volume ?? 0), 0);
   const weighted = tiers.filter((t) => t.maker_fee_bps !== null).reduce((s, t) => s + Number(t.maker_fee_bps) * Number(t.volume ?? 0), 0);
   const weightedVolume = tiers.filter((t) => t.maker_fee_bps !== null).reduce((s, t) => s + Number(t.volume ?? 0), 0);
-  const topPairs = await deskPairs(pool, top.map((d) => ({ chain: d.chain as string, desk: d.desk as string })));
+  const topPairs = await makerPairs(pool, top.map((d) => ({ chain: d.chain as string, maker: d.maker as string })));
+  const topTemplates = await makerTemplates(pool, top.map((d) => ({ chain: d.chain as string, maker: d.maker as string })));
   return {
     window: w.name, chain: c ?? "all", rollup_at: at.toISOString(),
     hero: { economic_fills: Number(cnt.fills), strategies_active: Number(cnt.strategies), ...scored(h, ratio(cnt.priced, cnt.fills), Number(h.tape_ratio), at) },
@@ -139,7 +140,7 @@ export async function overview(pool: Pool, window: string | null, chain: string 
     },
     totals: { strategies: Number(tot.strategies), live: Number(tot.live), desks: Number(tot.desks), makers: Number(tot.makers) },
     chains: chains.map((r) => ({ chain: r.chain, fills: Number(r.fills), volume_usd: priced(r.volume, r.priced_ratio, at, HOURLY), edge_usd: priced(r.edge, r.priced_ratio, at, refSource(r.tape_ratio)), markout_1h_usd: priced(r.markout_1h, r.priced_ratio, at, refSource(r.tape_ratio)) })),
-    top_desks: top.map((d) => ({ chain: d.chain, desk: d.desk, maker: d.maker, maker_label: d.maker_label ?? null, template: d.template, template_name: d.template_name ?? null, fills: Number(d.fills), pairs: topPairs.get(`${d.chain}:${d.desk}`) ?? [],
+    top_makers: top.map((d) => ({ chain: d.chain, maker: d.maker, maker_label: d.maker_label ?? null, fills: Number(d.fills), pairs: topPairs.get(`${d.chain}:${d.maker}`) ?? [], templates: topTemplates.get(`${d.chain}:${d.maker}`) ?? [],
       maker_fee_bps: num(d.maker_fee_bps), ...scored(d, d.priced_ratio, Number(d.tape_ratio), at) })),
     latest_ships: ships.map((s) => ({ chain: s.chain, id: s.id, maker: s.maker, desk: s.desk, template: s.template, template_name: s.template_name ?? null, registry: s.registry, shipped_at: Number(s.shipped_at), shipped_tx: s.shipped_tx, status: s.status })),
   };
@@ -198,6 +199,129 @@ export async function deskPairs(pool: Pool, keys: { chain: string; desk: string 
     out.set(k, list);
   }
   return out;
+}
+
+export interface MakerTemplate { template: string; name: string | null; kind: string | null; strategies: number; live: number; volume_usd: number | null; instructions?: string[] | null }
+
+// The templates each maker in a list runs on its chain, largest volume first.
+export async function makerTemplates(pool: Pool, keys: { chain: string; maker: string }[]): Promise<Map<string, MakerTemplate[]>> {
+  const out = new Map<string, MakerTemplate[]>();
+  if (!keys.length) return out;
+  const { rows } = await pool.query(`
+    SELECT d.chain, d.maker, d.template, tp.name, tp.kind, d.strategies, d.live, d.volume_usd
+    FROM desk_stats d LEFT JOIN templates tp ON tp.chain = d.chain AND tp.id = d.template
+    WHERE (d.chain || ':' || d.maker) = ANY($1::text[]) ORDER BY d.volume_usd DESC NULLS LAST, d.strategies DESC`, [keys.map((k) => `${k.chain}:${k.maker}`)]);
+  for (const r of rows) {
+    const k = `${r.chain}:${r.maker}`; const list = out.get(k) ?? [];
+    list.push({ template: r.template, name: r.name ?? null, kind: r.kind ?? null, strategies: Number(r.strategies), live: Number(r.live), volume_usd: num(r.volume_usd) });
+    out.set(k, list);
+  }
+  return out;
+}
+
+// The top pairs of each maker on its chain, by priced volume, with each pair's share of the maker's priced volume.
+export async function makerPairs(pool: Pool, keys: { chain: string; maker: string }[], top = 3): Promise<Map<string, DeskPair[]>> {
+  const out = new Map<string, DeskPair[]>();
+  if (!keys.length) return out;
+  const { rows } = await pool.query(`
+    SELECT p.chain, p.maker, p.base_token, p.quote_token, sum(p.fills) AS fills, sum(p.volume_usd) AS volume_usd, tb.symbol AS base_symbol, tq.symbol AS quote_symbol
+    FROM desk_pairs p
+    LEFT JOIN tokens tb ON tb.chain = p.chain AND tb.address = p.base_token
+    LEFT JOIN tokens tq ON tq.chain = p.chain AND tq.address = p.quote_token
+    WHERE (p.chain || ':' || p.maker) = ANY($1::text[])
+    GROUP BY p.chain, p.maker, p.base_token, p.quote_token, tb.symbol, tq.symbol
+    ORDER BY volume_usd DESC NULLS LAST, fills DESC`, [keys.map((k) => `${k.chain}:${k.maker}`)]);
+  const totals = new Map<string, number>();
+  for (const r of rows) { const k = `${r.chain}:${r.maker}`; totals.set(k, (totals.get(k) ?? 0) + Number(r.volume_usd ?? 0)); }
+  for (const r of rows) {
+    const k = `${r.chain}:${r.maker}`; const list = out.get(k) ?? [];
+    if (list.length >= top) continue;
+    const total = totals.get(k) ?? 0;
+    list.push({ base_token: r.base_token, quote_token: r.quote_token, base_symbol: r.base_symbol ?? null, quote_symbol: r.quote_symbol ?? null, fills: Number(r.fills), share: total > 0 ? Number(r.volume_usd ?? 0) / total : 0 });
+    out.set(k, list);
+  }
+  return out;
+}
+
+function makerRow(m: Record<string, unknown>, at: Date) {
+  const pr = m.priced_ratio as number;
+  const tape = ratio(m.tape_fills, Number(m.fills) * pr);
+  return {
+    chain: m.chain, maker: m.maker, maker_label: (m.maker_label as string | null) ?? null,
+    templates_count: Number(m.templates), strategies: Number(m.strategies), live: Number(m.live), fills: Number(m.fills),
+    ...scored(m, pr, tape, at),
+    pnl_usd_marked: priced(m.pnl_usd_marked as number, pr, at, "latest defillama prices"),
+    maker_fee_bps: num(m.maker_fee_bps), maker_fee_bps_min: num(m.maker_fee_bps_min), maker_fee_bps_max: num(m.maker_fee_bps_max),
+    first_seen: num(m.first_seen), last_seen: num(m.last_seen),
+  };
+}
+
+// Makers on a chain, the unit of judgement: the wallet that holds the inventory, across every template and strategy it shipped there.
+export async function makers(pool: Pool, chain: string | null, sort: string | null, limit: number, minVolume: number) {
+  const at = await rollupAt(pool); const c = chainParam(chain);
+  const by = (DESK_SORTS[sort ?? "volume"] ?? DESK_SORTS.volume).replace(/\bd\./g, "m.");
+  const { rows } = await pool.query(`SELECT m.*, lb.label AS maker_label FROM maker_stats m
+    LEFT JOIN labels lb ON (lb.chain = '*' OR lb.chain = m.chain) AND lb.address = m.maker
+    WHERE coalesce(m.volume_usd, 0) >= $2 AND ($3::text IS NULL OR m.chain = $3) ORDER BY ${by} LIMIT $1`, [limit, minVolume, c]);
+  const keys = rows.map((m) => ({ chain: m.chain as string, maker: m.maker as string }));
+  const pairs = await makerPairs(pool, keys); const templates = await makerTemplates(pool, keys);
+  return rows.map((m) => ({ ...makerRow(m, at), pairs: pairs.get(`${m.chain}:${m.maker}`) ?? [], templates: templates.get(`${m.chain}:${m.maker}`) ?? [] }));
+}
+
+export async function maker(pool: Pool, chain: string, address: string, offset = 0, limit = 50) {
+  const at = await rollupAt(pool); const a = address.toLowerCase();
+  const { rows: [m] } = await pool.query(`SELECT m.*, lb.label AS maker_label FROM maker_stats m
+    LEFT JOIN labels lb ON (lb.chain = '*' OR lb.chain = m.chain) AND lb.address = m.maker
+    WHERE m.chain = $1 AND m.maker = $2`, [chain, a]);
+  if (!m) return null;
+  const key = `${chain}:${a}`;
+  const pairs = (await makerPairs(pool, [{ chain, maker: a }], 6)).get(key) ?? [];
+  const { rows: tps } = await pool.query(`
+    SELECT d.*, tp.name AS template_name, tp.kind AS template_kind, tp.instructions FROM desk_stats d
+    LEFT JOIN templates tp ON tp.chain = d.chain AND tp.id = d.template
+    WHERE d.chain = $1 AND d.maker = $2 ORDER BY d.volume_usd DESC NULLS LAST, d.strategies DESC`, [chain, a]);
+  const { rows: [fees] } = await pool.query(`
+    SELECT count(*) FILTER (WHERE sf.decoded) AS decoded, count(*) AS strategies,
+           array_agg(DISTINCT sf.maker_fee_kind) FILTER (WHERE sf.maker_fee_kind IS NOT NULL) AS maker_kinds,
+           array_agg(DISTINCT sf.maker_fee_side) FILTER (WHERE sf.maker_fee_side IS NOT NULL) AS maker_sides,
+           min(sf.protocol_fee_bps) AS protocol_bps_min, max(sf.protocol_fee_bps) AS protocol_bps_max,
+           array_agg(DISTINCT sf.protocol_fee_to) FILTER (WHERE sf.protocol_fee_to IS NOT NULL) AS protocol_recipients,
+           array_agg(DISTINCT sf.protocol_fee_kind) FILTER (WHERE sf.protocol_fee_kind IS NOT NULL) AS protocol_kinds
+    FROM strategies s LEFT JOIN strategy_fees sf ON sf.chain = s.chain AND sf.strategy_id = s.id
+    WHERE s.chain = $1 AND s.maker = $2`, [chain, a]);
+  const { rows: strategies } = await pool.query(`
+    SELECT s.id, s.strategy_hash, s.registry, s.status, s.shipped_at, s.docked_at, s.template, tp.name AS template_name, st.fills, st.volume_usd, st.edge_usd, st.markout_5m_usd, st.markout_1h_usd, st.drift_1h_usd,
+           st.protocol_fee_usd, st.maker_fee_usd, st.tape_fills, st.priced_fills, sf.maker_fee_bps, sf.protocol_fee_bps,
+           st.markout_5m_bps, st.markout_5m_bps_se, st.markout_1h_bps, st.markout_1h_bps_se,
+           st.pnl_quote, st.quote_token, tq.symbol AS quote_symbol, st.pnl_quote_coverage, st.priced_ratio, st.takers, st.top_taker_share, st.self_fills
+    FROM strategies s LEFT JOIN strategy_stats st ON st.chain = s.chain AND st.strategy_id = s.id
+    LEFT JOIN strategy_fees sf ON sf.chain = s.chain AND sf.strategy_id = s.id
+    LEFT JOIN templates tp ON tp.chain = s.chain AND tp.id = s.template
+    LEFT JOIN tokens tq ON tq.chain = st.chain AND tq.address = st.quote_token
+    WHERE s.chain = $1 AND s.maker = $2 ORDER BY s.shipped_at DESC LIMIT $3 OFFSET $4`, [chain, a, limit, offset]);
+  const { rows: fills } = await pool.query(`
+    SELECT f.id, f.tx, f.block, f.ts, f.taker, f.shape, v.volume_usd, v.edge_usd, v.markout_5m_usd, v.markout_1h_usd, v.priced, v.ref_kind, v.ref_window_min, v.ref_fills
+    FROM fills f JOIN strategies s ON s.chain = f.chain AND s.id = f.strategy_id
+    LEFT JOIN fill_values v ON v.chain = f.chain AND v.fill_id = f.id
+    WHERE f.chain = $1 AND s.maker = $2 AND f.economic ORDER BY f.ts DESC LIMIT 50`, [chain, a]);
+  return {
+    ...makerRow(m, at), pairs,
+    templates: tps.map((d) => ({ template: d.template, name: (d.template_name as string | null) ?? null, kind: (d.template_kind as string | null) ?? null, instructions: (d.instructions as string[] | null) ?? null,
+      strategies: Number(d.strategies), live: Number(d.live), fills: Number(d.fills), ...scored(d, d.priced_ratio, ratio(d.tape_fills, Number(d.fills) * Number(d.priced_ratio)), at), maker_fee_bps: num(d.maker_fee_bps) })),
+    strategies_total: Number(m.strategies),
+    fees: {
+      decoded: Number(fees.decoded), strategies: Number(fees.strategies),
+      maker_fee_bps: num(m.maker_fee_bps), maker_fee_bps_min: num(m.maker_fee_bps_min), maker_fee_bps_max: num(m.maker_fee_bps_max),
+      maker_kinds: fees.maker_kinds ?? [], maker_sides: fees.maker_sides ?? [],
+      protocol_fee_bps_min: num(fees.protocol_bps_min), protocol_fee_bps_max: num(fees.protocol_bps_max),
+      protocol_recipients: fees.protocol_recipients ?? [], protocol_kinds: fees.protocol_kinds ?? [],
+    },
+    strategies: strategies.map((s) => ({ id: s.id, strategy_hash: s.strategy_hash, registry: s.registry, status: s.status, shipped_at: Number(s.shipped_at), docked_at: num(s.docked_at), template: s.template, template_name: (s.template_name as string | null) ?? null,
+      fills: Number(s.fills ?? 0), ...scored(s, s.priced_ratio, ratio(s.tape_fills, s.priced_fills), at), maker_fee_bps: num(s.maker_fee_bps), protocol_fee_bps: num(s.protocol_fee_bps),
+      pnl_quote: s.pnl_quote === null ? null : { value: Number(s.pnl_quote), quote_token: s.quote_token, quote_symbol: s.quote_symbol ?? null, coverage: Number(s.pnl_quote_coverage), source: "own fills, 24h VWAP marks" },
+      takers: Number(s.takers ?? 0), top_taker_share: num(s.top_taker_share), self_fills: Number(s.self_fills ?? 0) })),
+    recent_fills: fills.map((f) => fillRow(f, at)),
+  };
 }
 
 function deskRow(d: Record<string, unknown>, at: Date) {
@@ -325,12 +449,11 @@ export async function strategy(pool: Pool, chain: string, id: string, offset = 0
 
 export async function search(pool: Pool, q: string) {
   const term = q.trim().toLowerCase();
-  if (term.length < 3) return { makers: [], strategies: [], desks: [] };
+  if (term.length < 3) return { makers: [], strategies: [] };
   const like = term + "%";
-  const { rows: makers } = await pool.query(`SELECT DISTINCT chain, maker FROM strategies WHERE maker LIKE $1 LIMIT 10`, [like]);
-  const { rows: strategies } = await pool.query(`SELECT chain, id, strategy_hash, desk, status FROM strategies WHERE strategy_hash LIKE $1 OR id LIKE $1 LIMIT 10`, [like]);
-  const { rows: desks } = await pool.query(`SELECT chain, desk, maker, fills FROM desk_stats WHERE desk LIKE $1 LIMIT 10`, [like]);
-  return { makers, strategies, desks: desks.map((d) => ({ ...d, fills: Number(d.fills) })) };
+  const { rows: makers } = await pool.query(`SELECT chain, maker, fills, strategies, live FROM maker_stats WHERE maker LIKE $1 ORDER BY volume_usd DESC NULLS LAST LIMIT 10`, [like]);
+  const { rows: strategies } = await pool.query(`SELECT chain, id, strategy_hash, maker, status FROM strategies WHERE strategy_hash LIKE $1 OR id LIKE $1 LIMIT 10`, [like]);
+  return { makers: makers.map((m) => ({ ...m, fills: Number(m.fills), strategies: Number(m.strategies), live: Number(m.live) })), strategies };
 }
 
 export type { Priced };

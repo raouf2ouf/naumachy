@@ -72,20 +72,19 @@ function FeePanel({ fees, makerFee, protocolFee, volume }: { fees: DeskFees; mak
   );
 }
 
-export function DeskDetail() {
-  const { chain = "", id = "" } = useParams();
+export function MakerDetail() {
+  const { chain = "", address = "" } = useParams();
   const [limit, setLimit] = useState(50);
-  const q = useQuery({ queryKey: ["desk", chain, id, limit], queryFn: () => api.desk(chain, id, limit), placeholderData: (prev) => prev });
-  if (q.isPending) return <Loading what="the desk" />;
-  if (q.isError) return <Failed what="this desk" error={q.error} />;
+  const q = useQuery({ queryKey: ["maker", chain, address, limit], queryFn: () => api.maker(chain, address, limit), placeholderData: (prev) => prev });
+  if (q.isPending) return <Loading what="the maker" />;
+  if (q.isError) return <Failed what="this maker" error={q.error} />;
   const d = q.data; const c = chain as Chain;
   return (
     <div className="fade">
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="page-title">{d.maker_label ? <span>{d.maker_label} <Addr value={d.maker} chars={6} className="text-base text-ink-muted" /></span> : <Addr value={d.maker} chars={10} />}</h1>
         <ChainChip chain={c} />
-        <span className="chip" title={d.instructions ? d.instructions.join(" > ") : d.template}>{d.template_name ?? `template ${shortAddr(d.template, 8, 4)}`}</span>
-        <span className="text-ink-muted text-[13px]"><span className="gain">{d.live}</span> live of {d.strategies_total} strategies</span>
+        <span className="text-ink-muted text-[13px]"><span className="gain">{d.live}</span> live of {d.strategies_total} strategies, {d.templates.length === 1 ? "one template" : `${d.templates.length} templates`}</span>
       </div>
       <p className="mt-2 text-[13.5px]"><span className="text-ink-muted mr-2">Trades</span><Pairs pairs={d.pairs} max={4} /></p>
       <p className="page-desc">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
@@ -93,21 +92,43 @@ export function DeskDetail() {
       <ScoreTiles s={d} volumeLabel="Volume, all time" />
       <FeePanel fees={d.fees} makerFee={d.maker_fee_usd} protocolFee={d.protocol_fee_usd} volume={d.volume_usd} />
 
-      <Section title="Strategies">
+      <Section title="Templates" description="The shapes of the programs this maker ships here: the opcode sequence with the arguments ignored. A maker re-ships the same template many times with new parameters.">
         <div className="overflow-x-auto panel">
           <table>
-            <thead><tr><th>State</th><th>Strategy</th><th>Shipped</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fee</th><th className="num">Edge, 5 min</th><th className="num">Edge at fill</th><th className="num">Pair P&L</th><th className="num">Takers</th></tr></thead>
+            <thead><tr><th>Template</th><th className="num">Strategies</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th></tr></thead>
+            <tbody>
+              {d.templates.map((t) => (
+                <tr key={t.template}>
+                  <td><span title={t.instructions ? t.instructions.join(" > ") : t.template}>{t.name ?? `template ${shortAddr(t.template, 8, 4)}`}</span></td>
+                  <td className="num"><span className="gain">{t.live}</span><span className="text-ink-faint"> / {t.strategies}</span></td>
+                  <td className="num">{compact(t.fills, 0)}</td>
+                  <td className="num"><Money p={t.volume_usd} /></td>
+                  <td className="num"><Money p={t.maker_fee_usd} className="fee" /><span className="sub">{feeBps(t.maker_fee_bps)}</span></td>
+                  <td className="num"><Money p={t.markout_5m_usd} signed colored className="font-medium" />{t.markout_5m_bps && <span className="band">{bandText(t.markout_5m_bps)}</span>}</td>
+                  <td className="num text-ink-muted"><EdgeCell edge={t.edge_usd} volume={t.volume_usd} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section title="Strategies" description="Every program this maker shipped here, newest first. Docked means revoked: the tokens never left the wallet.">
+        <div className="overflow-x-auto panel">
+          <table>
+            <thead><tr><th>State</th><th>Strategy</th><th>Template</th><th>Shipped</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min</th><th className="num">Edge at fill</th><th className="num">Pair P&L</th><th className="num">Takers</th></tr></thead>
             <tbody>
               {d.strategies.map((s) => (
                 <tr key={s.id}>
                   <td><StatusDot status={s.status} /></td>
                   <td><Link to={`/strategy/${chain}/${encodeURIComponent(s.id)}`} className="mono">{shortAddr(s.strategy_hash, 10, 6)}</Link> <RegistryChip registry={s.registry} /></td>
+                  <td className="text-ink-muted text-[12.5px]">{s.template_name ?? ""}</td>
                   <td className="text-ink-muted"><When ts={s.shipped_at} /></td>
                   <td className="num">{compact(s.fills, 0)}</td>
                   <td className="num"><Money p={s.volume_usd} /></td>
-                  <td className="num text-ink-muted">{feeBps(s.maker_fee_bps)}</td>
-                  <td className="num"><Money p={s.markout_5m_usd} signed colored />{s.markout_5m_bps && <span className="text-ink-faint ml-1.5 text-xs">{bandText(s.markout_5m_bps)}</span>}</td>
-                  <td className="num"><EdgeCell edge={s.edge_usd} volume={s.volume_usd} /></td>
+                  <td className="num"><Money p={s.maker_fee_usd} className="fee" /><span className="sub">{feeBps(s.maker_fee_bps)}</span></td>
+                  <td className="num"><Money p={s.markout_5m_usd} signed colored className="font-medium" />{s.markout_5m_bps && <span className="band">{bandText(s.markout_5m_bps)}</span>}</td>
+                  <td className="num text-ink-muted"><EdgeCell edge={s.edge_usd} volume={s.volume_usd} /></td>
                   <td className="num">{s.pnl_quote ? <span className={s.pnl_quote.value > 0 ? "gain" : s.pnl_quote.value < 0 ? "loss" : ""} title={`from its own fills, ${percent(s.pnl_quote.coverage)} of bases marked`}>{s.pnl_quote.value > 0 ? "+" : ""}{compact(s.pnl_quote.value, 4)} {s.pnl_quote.quote_symbol ?? shortAddr(s.pnl_quote.quote_token, 4, 3)}</span> : <span className="text-ink-faint">no fills</span>}</td>
                   <td className="num text-ink-muted">{s.takers}{s.self_fills > 0 && <span className="chip warn ml-1.5">{s.self_fills} self</span>}</td>
                 </tr>
@@ -119,7 +140,7 @@ export function DeskDetail() {
       </Section>
 
       <Section title="Recent economic fills">
-        <div className="panel divide-y divide-water-700">
+        <div className="panel list">
           {d.recent_fills.map((f) => (
             <FillLine key={f.id} f={f}>
               <span className="text-ink-muted">{f.shape === "TWO_SIDED" ? "two-sided fill" : f.shape.toLowerCase().replace("_", " ")}</span>

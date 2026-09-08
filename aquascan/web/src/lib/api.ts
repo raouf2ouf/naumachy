@@ -18,19 +18,21 @@ export interface Overview {
   fees: { maker_fee_bps: number | null; tiers: FeeTier[]; protocol: ProtocolRecipient[] };
   totals: { strategies: number; live: number; desks: number; makers: number };
   chains: { chain: Chain; fills: number; volume_usd: Priced; edge_usd: Priced; markout_1h_usd: Priced }[];
-  top_desks: DeskSummary[];
+  top_makers: MakerSummary[];
   latest_ships: { chain: Chain; id: string; maker: string; desk: string; template: string; template_name: string | null; registry: string; shipped_at: number; shipped_tx: string; status: string }[];
 }
-export interface DeskSummary extends Scored { pairs?: DeskPair[]; chain: Chain; desk: string; maker: string; maker_label?: string | null; template: string; template_name?: string | null; template_kind?: string | null; fills: number; maker_fee_bps: number | null }
+export interface MakerTemplate { template: string; name: string | null; kind: string | null; strategies: number; live: number; volume_usd: number | null; instructions?: string[] | null }
+export interface MakerSummary extends Scored { chain: Chain; maker: string; maker_label?: string | null; pairs?: DeskPair[]; templates?: MakerTemplate[]; fills: number; maker_fee_bps: number | null }
 export interface DeskPair { base_token: string; quote_token: string; base_symbol: string | null; quote_symbol: string | null; fills: number; share: number }
-export interface DeskRow extends DeskSummary { pairs?: DeskPair[]; strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
+export interface MakerRow extends MakerSummary { templates_count: number; strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
 export interface Series { window: string; chain: string; rollup_at: string; source: string; days: { day: number; date: string; fills: number; volume_usd: number | null; edge_usd: number | null; markout_5m_usd: number | null; markout_1h_usd: number | null; drift_1h_usd: number | null; protocol_fee_usd: number | null; maker_fee_usd: number | null }[] }
 export interface PnlQuote { value: number; quote_token: string; quote_symbol?: string | null; coverage: number; mark_age_s?: number | null; source: string }
-export interface StrategyRow extends Scored { id: string; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; maker_fee_bps: number | null; protocol_fee_bps: number | null; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }
+export interface StrategyRow extends Scored { id: string; template?: string; template_name?: string | null; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; maker_fee_bps: number | null; protocol_fee_bps: number | null; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }
 export interface FillRow { id: string; tx: string; block: number; ts: number; taker: string | null; shape: string; volume_usd: Priced; edge_usd: Priced; markout_5m_usd: Priced; markout_1h_usd: Priced; drift_1h_usd: Priced; protocol_fee_usd: Priced; ref_kind: string | null; ref_window_min: number | null; ref_fills: number | null; legs?: Leg[] }
 export interface Leg { token: string; symbol: string | null; decimals: number | null; net: string; pushed: string; pulled: string }
 export interface DeskFees { decoded: number; strategies: number; maker_fee_bps: number | null; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; maker_kinds: string[]; maker_sides: string[]; protocol_fee_bps_min: number | null; protocol_fee_bps_max: number | null; protocol_recipients: string[]; protocol_kinds: string[] }
-export interface DeskDetailFull extends Omit<DeskRow, "strategies"> { strategies: StrategyRow[]; strategies_total: number; instructions: string[] | null; fees: DeskFees; recent_fills: FillRow[] }
+export interface MakerTemplateRow extends Omit<MakerTemplate, "volume_usd">, Scored { fills: number; maker_fee_bps: number | null }
+export interface MakerDetailFull extends Omit<MakerRow, "strategies" | "templates"> { templates: MakerTemplateRow[]; strategies: StrategyRow[]; strategies_total: number; fees: DeskFees; recent_fills: FillRow[] }
 export interface Mark { base_token: string; base_symbol: string | null; quote_token: string; quote_symbol: string | null; price: number | null; vwap_raw: number; fills: number; mark_ts: number }
 export interface StrategyFees { decoded: boolean; maker_fee_bps: number | null; maker_fee_side: string | null; maker_fee_kind: string | null; protocol_fee_bps: number | null; protocol_fee_to: string | null; protocol_fee_kind: string | null; protocol_fee_provider: string | null }
 export interface StrategyDetail {
@@ -41,7 +43,7 @@ export interface StrategyDetail {
   marks: Mark[]; fills: FillRow[];
 }
 export interface Health { rollup_at: string; chains: { chain: Chain; cursor: number; subgraph_head: number | null; blocks_behind: number | null; updated_at: string; economic_fills: number; priced_ratio: number; tape_ratio: number }[] }
-export interface SearchResult { makers: { chain: Chain; maker: string }[]; strategies: { chain: Chain; id: string; strategy_hash: string; desk: string; status: string }[]; desks: { chain: Chain; desk: string; maker: string; fills: number }[] }
+export interface SearchResult { makers: { chain: Chain; maker: string; fills: number; strategies: number; live: number }[]; strategies: { chain: Chain; id: string; strategy_hash: string; maker: string; status: string }[] }
 
 // The arena: generations of gladiators as the registry attests them, joined with Aquascan's numbers.
 export interface Knobs { feeBaseBps: number; feeSlopeBps: number; feeMaxBps: number; windowSeconds: number; depth: number; capBps: number; parent?: string | null }
@@ -71,9 +73,9 @@ export const api = {
   health: () => get<Health>("/api/health"),
   overview: (window: string, chain: string | null) => get<Overview>(`/api/overview?window=${window}${chain ? `&chain=${chain}` : ""}`),
   series: (window: string, chain: string | null) => get<Series>(`/api/series?window=${window}${chain ? `&chain=${chain}` : ""}`),
-  desks: (chain: string | null, sort: string, limit = 50, minVolume = 0) => get<DeskRow[]>(`/api/desks?sort=${sort}&limit=${limit}&minVolume=${minVolume}${chain ? `&chain=${chain}` : ""}`),
-  leaderboard: (chain: string | null, sort: string, limit = 50, minVolume = 1000) => get<DeskRow[]>(`/api/leaderboard?sort=${sort}&limit=${limit}&minVolume=${minVolume}${chain ? `&chain=${chain}` : ""}`),
-  desk: (chain: string, id: string, limit = 50) => get<DeskDetailFull>(`/api/desk/${chain}/${encodeURIComponent(id)}?limit=${limit}`),
+  makers: (chain: string | null, sort: string, limit = 50, minVolume = 0) => get<MakerRow[]>(`/api/makers?sort=${sort}&limit=${limit}&minVolume=${minVolume}${chain ? `&chain=${chain}` : ""}`),
+  leaderboard: (chain: string | null, sort: string, limit = 50, minVolume = 1000) => get<MakerRow[]>(`/api/leaderboard?sort=${sort}&limit=${limit}&minVolume=${minVolume}${chain ? `&chain=${chain}` : ""}`),
+  maker: (chain: string, address: string, limit = 50) => get<MakerDetailFull>(`/api/maker/${chain}/${address}?limit=${limit}`),
   strategy: (chain: string, id: string, limit = 50) => get<StrategyDetail>(`/api/strategy/${chain}/${encodeURIComponent(id)}?limit=${limit}`),
   search: (q: string) => get<SearchResult>(`/api/search?q=${encodeURIComponent(q)}`),
   arena: () => get<Arena>("/api/arena"),

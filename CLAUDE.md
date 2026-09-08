@@ -14,7 +14,7 @@ Read in order: this file, `docs/plan.md` (gates, milestones), `docs/interfaces.m
 - gladiator: one agent = one wallet + bankroll + the program it authored
 - program: SwapVM bytecode shipped to Aqua (bytes, no deployment); ship/dock register/kill it; pull/push move real tokens at settlement
 - economic fill: a settlement where value moved both ways; the only fills that count, everywhere
-- desk: maker x template x chain; template: opcode sequence, args ignored; dialect: opcode table per router deployment
+- maker: a wallet that shipped strategies; judged per chain (the inventory lives in the wallet, per chain): "a maker on a chain" is the unit the explorer shows. desk: maker x template x chain, an internal grouping (`desk_stats`, `desk_pairs`) the interface no longer names; template: opcode sequence, args ignored; dialect: opcode table per router deployment
 - gym: anvil fork + local graph-node + taker engine; arena: live Base indexed by The Graph Network
 - champion/promotion: winner gets a real bankroll after a tap on the Ledger Flex; lanista: the human operator (Raouf)
 

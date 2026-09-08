@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, type Chain, type Leg, type StrategyFees } from "../lib/api";
 import { absTime, amount, compact, feeBps, percent, relTime, shortAddr, usd } from "../lib/format";
 import { Addr, ChainChip, Failed, Loading, Money, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
-import { FillLine, ScoreTiles } from "./DeskDetail";
+import { FillLine, ScoreTiles } from "./MakerDetail";
 
 function LegsSentence({ legs }: { legs: Leg[] }) {
   const received = legs.filter((l) => !l.net.startsWith("-") && l.net !== "0");
@@ -53,7 +53,7 @@ export function StrategyDetail() {
         <RegistryChip registry={s.registry} />
       </div>
       <p className="page-desc">
-        Shipped <When ts={s.shipped_at} /> by <Link to={`/desk/${chain}/${encodeURIComponent(s.desk)}`} className="mono text-ink">{shortAddr(s.maker)}</Link> through {s.app_label ? <span title={s.app}>{s.app_label}</span> : <>router <span className="mono" title={s.app}>{shortAddr(s.app)}</span></>}
+        Shipped <When ts={s.shipped_at} /> by <Link to={`/maker/${chain}/${s.maker}`} className="mono text-ink">{shortAddr(s.maker)}</Link> through {s.app_label ? <span title={s.app}>{s.app_label}</span> : <>router <span className="mono" title={s.app}>{shortAddr(s.app)}</span></>}
         {s.docked_at ? <>, docked <When ts={s.docked_at} />. Docked means revoked: tokens never left the wallet.</> : <>. Still live.</>}
       </p>
 
