@@ -41,7 +41,7 @@ contract ShipGladiator is Script, NaumachyOpcodes {
         bytes memory program = bytes.concat(
             p.build(RiskCap._riskCapXD, RiskCapArgsBuilder.build(capBps, capBps)),
             p.build(ToxicityFee._toxicityFeeXD, ToxicityFeeArgsBuilder.build(feeBase, feeSlope, feeMax, window)),
-            p.build(OracleAnchor._oracleAnchorXD, OracleAnchorArgsBuilder.build(oracle, weth, 18, 18, 6, 0, depth)),
+            p.build(OracleAnchor._oracleAnchorXD, OracleAnchorArgsBuilder.build(oracle, weth, usdc, 18, 18, 6, 0, depth)),
             p.build(XYCSwap._xycSwapXD),
             p.build(Controls._salt, abi.encodePacked(salt))
         );

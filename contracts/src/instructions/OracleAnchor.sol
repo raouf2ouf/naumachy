@@ -3,38 +3,36 @@ pragma solidity 0.8.30;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { Calldata } from "@1inch/solidity-utils/contracts/libraries/Calldata.sol";
 import { Context } from "swap-vm/libs/VM.sol";
 import { IPriceOracle } from "swap-vm/instructions/interfaces/IPriceOracle.sol";
 
 library OracleAnchorArgsBuilder {
-    using Calldata for bytes;
-
     error OracleAnchorMissingArgs();
 
     uint256 internal constant DEPTH_ONE = 1e6;   // depth multiplier scale: 1e6 means the real balance
+    uint256 internal constant HEADER = 6;        // maxStaleness (2) + depth (4)
+    uint256 internal constant ENTRY = 63;        // oracle (20) + base (20) + quote (20) + three decimals
 
-    /// @param oracle         answers latestRoundData() with the price of one `base` in the other token
-    /// @param base           the token the oracle prices
-    /// @param oracleDecimals decimals of the oracle answer
-    /// @param baseDecimals   decimals of `base`
-    /// @param quoteDecimals  decimals of the other token of the pair
-    /// @param maxStaleness   seconds after which the answer is refused, 0 for no check
-    /// @param depth          virtual depth of the curve as a multiple of the real balance, 1e6 = 1x
-    function build(address oracle, address base, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals, uint16 maxStaleness, uint32 depth)
-        internal pure returns (bytes memory)
-    {
-        return abi.encodePacked(oracle, base, oracleDecimals, baseDecimals, quoteDecimals, maxStaleness, depth);
+    /// @dev One anchored pair: the oracle answers `latestRoundData()` with the price of one `base` in `quote`.
+    struct Pair { address oracle; address base; address quote; uint8 oracleDecimals; uint8 baseDecimals; uint8 quoteDecimals; }
+
+    /// @param maxStaleness seconds after which an answer is refused, 0 for no check
+    /// @param depth        virtual depth of the curve as a multiple of the real balance, 1e6 = 1x
+    /// @param pairs        the pairs this strategy anchors; a swap on any other pair reverts
+    function build(uint16 maxStaleness, uint32 depth, Pair[] memory pairs) internal pure returns (bytes memory out) {
+        out = abi.encodePacked(maxStaleness, depth);
+        for (uint256 i = 0; i < pairs.length; i++) {
+            out = abi.encodePacked(out, pairs[i].oracle, pairs[i].base, pairs[i].quote, pairs[i].oracleDecimals, pairs[i].baseDecimals, pairs[i].quoteDecimals);
+        }
     }
 
-    function parse(bytes calldata args) internal pure returns (address oracle, address base, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals, uint16 maxStaleness, uint32 depth) {
-        oracle = address(bytes20(args.slice(0, 20, OracleAnchorMissingArgs.selector)));
-        base = address(bytes20(args.slice(20, 40, OracleAnchorMissingArgs.selector)));
-        oracleDecimals = uint8(bytes1(args.slice(40, 41, OracleAnchorMissingArgs.selector)));
-        baseDecimals = uint8(bytes1(args.slice(41, 42, OracleAnchorMissingArgs.selector)));
-        quoteDecimals = uint8(bytes1(args.slice(42, 43, OracleAnchorMissingArgs.selector)));
-        maxStaleness = uint16(bytes2(args.slice(43, 45, OracleAnchorMissingArgs.selector)));
-        depth = uint32(bytes4(args.slice(45, 49, OracleAnchorMissingArgs.selector)));
+    /// @dev A single anchored pair, the common case.
+    function build(address oracle, address base, address quote, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals, uint16 maxStaleness, uint32 depth)
+        internal pure returns (bytes memory)
+    {
+        Pair[] memory pairs = new Pair[](1);
+        pairs[0] = Pair(oracle, base, quote, oracleDecimals, baseDecimals, quoteDecimals);
+        return build(maxStaleness, depth, pairs);
     }
 }
 
@@ -45,29 +43,30 @@ library OracleAnchorArgsBuilder {
 ///   over these balances then executes at the oracle price with slippage set by the depth, whichever
 ///   way the taker trades. The real ledger still bounds what can leave, so a deep virtual curve
 ///   never promises more than the maker holds.
+///   One instruction carries a table of pairs, so a strategy shipped with several tokens quotes
+///   every pair from one ledger, each at its own reference. The table is what keeps the quotes
+///   coherent: a taker who loops through three pairs meets three live prices, not one stale one.
 /// @dev Not middleware: it rewrites the balance registers and lets the program continue. It must run
-///   before amounts are computed. Pair-bound: both tokens of the swap must be the oracle's base and
-///   the other token of the pair.
+///   before amounts are computed. A swap on a pair the table does not name reverts.
 abstract contract OracleAnchor {
     using SafeCast for int256;
 
     error OracleAnchorShouldBeAppliedBeforeSwapAmountsComputation();
-    error OracleAnchorUnknownToken(address tokenIn, address tokenOut);
+    error OracleAnchorUnknownPair(address tokenIn, address tokenOut);
     error OracleAnchorStale(uint256 currentTime, uint256 updatedAt, uint16 maxStaleness);
     error OracleAnchorEmptyCurve();
 
-    /// @param args.oracle         | 20 bytes
-    /// @param args.base           | 20 bytes
-    /// @param args.oracleDecimals | 1 byte
-    /// @param args.baseDecimals   | 1 byte
-    /// @param args.quoteDecimals  | 1 byte
-    /// @param args.maxStaleness   | 2 bytes
-    /// @param args.depth          | 4 bytes (1e6 = 1x)
+    /// @param args.maxStaleness | 2 bytes
+    /// @param args.depth        | 4 bytes (1e6 = 1x)
+    /// @param args.pairs        | N x 63 bytes: oracle, base, quote, oracleDecimals, baseDecimals, quoteDecimals
     function _oracleAnchorXD(Context memory ctx, bytes calldata args) internal view {
         require(ctx.swap.amountIn == 0 || ctx.swap.amountOut == 0, OracleAnchorShouldBeAppliedBeforeSwapAmountsComputation());
-        (address oracle, address base, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals, uint16 maxStaleness, uint32 depth) = OracleAnchorArgsBuilder.parse(args);
-        bool baseIn = ctx.query.tokenIn == base;
-        require(baseIn || ctx.query.tokenOut == base, OracleAnchorUnknownToken(ctx.query.tokenIn, ctx.query.tokenOut));
+        require(args.length >= OracleAnchorArgsBuilder.HEADER + OracleAnchorArgsBuilder.ENTRY, OracleAnchorArgsBuilder.OracleAnchorMissingArgs());
+        uint16 maxStaleness = uint16(bytes2(args[0:2]));
+        uint32 depth = uint32(bytes4(args[2:6]));
+        address tokenIn = ctx.query.tokenIn; address tokenOut = ctx.query.tokenOut;
+
+        (address oracle, bool baseIn, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals) = _lookup(args, tokenIn, tokenOut);
 
         (, int256 answer, , uint256 updatedAt, ) = IPriceOracle(oracle).latestRoundData();
         require(maxStaleness == 0 || block.timestamp <= updatedAt + maxStaleness, OracleAnchorStale(block.timestamp, updatedAt, maxStaleness));
@@ -80,5 +79,20 @@ abstract contract OracleAnchor {
         require(virtualIn > 0 && virtualOut > 0, OracleAnchorEmptyCurve());
         ctx.swap.balanceIn = virtualIn;
         ctx.swap.balanceOut = virtualOut;
+    }
+
+    /// @dev Finds the table entry for the swap's pair in either orientation.
+    function _lookup(bytes calldata args, address tokenIn, address tokenOut)
+        private pure returns (address oracle, bool baseIn, uint8 oracleDecimals, uint8 baseDecimals, uint8 quoteDecimals)
+    {
+        for (uint256 off = OracleAnchorArgsBuilder.HEADER; off + OracleAnchorArgsBuilder.ENTRY <= args.length; off += OracleAnchorArgsBuilder.ENTRY) {
+            address base = address(bytes20(args[off + 20:off + 40]));
+            address quote = address(bytes20(args[off + 40:off + 60]));
+            if (base == tokenIn && quote == tokenOut) baseIn = true;
+            else if (base == tokenOut && quote == tokenIn) baseIn = false;
+            else continue;
+            return (address(bytes20(args[off:off + 20])), baseIn, uint8(args[off + 60]), uint8(args[off + 61]), uint8(args[off + 62]));
+        }
+        revert OracleAnchorUnknownPair(tokenIn, tokenOut);
     }
 }

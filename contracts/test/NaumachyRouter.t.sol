@@ -73,7 +73,7 @@ contract NaumachyRouterTest is Test, NaumachyOpcodes {
         return bytes.concat(
             p.build(RiskCap._riskCapXD, RiskCapArgsBuilder.build(2e8, 2e8)),
             p.build(ToxicityFee._toxicityFeeXD, ToxicityFeeArgsBuilder.build(5 * BP, 200 * BP, 50 * BP, 600)),
-            p.build(OracleAnchor._oracleAnchorXD, OracleAnchorArgsBuilder.build(address(oracle), WETH, 18, 18, 6, 0, 100e6)),
+            p.build(OracleAnchor._oracleAnchorXD, OracleAnchorArgsBuilder.build(address(oracle), WETH, USDC, 18, 18, 6, 0, 100e6)),
             p.build(XYCSwap._xycSwapXD),
             p.build(Controls._salt, abi.encodePacked(uint256(0x5a17)))
         );
