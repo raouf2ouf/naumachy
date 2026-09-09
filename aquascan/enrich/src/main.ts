@@ -12,6 +12,7 @@ import { syncTokens } from "./lanes/tokens.js";
 import { syncFees } from "./lanes/fees.js";
 import { syncPools } from "./lanes/pools.js";
 import { syncAqua } from "./lanes/aqua.js";
+import { syncRewards } from "./lanes/rewards.js";
 import { Llama } from "./llama.js";
 import { rollup } from "./rollup.js";
 import { status, formatStatus } from "./status.js";
@@ -69,6 +70,7 @@ async function main() {
   });
   const llama = new Llama(createPacer(config.llamaCallsPerMinute));
   const rpcPaced = createPacer(30);
+  const merklPaced = createPacer(Number(process.env.MERKL_CALLS_PER_MINUTE ?? 30));
   log(`enrich: ${config.chains.map((c) => c.name).join(", ")} | ${config.gatewayCallsPerMinute} gateway calls/min | defillama ${config.llamaCallsPerMinute}/min, ${config.llamaCallsPerPass}/pass | poll ${config.pollSeconds}s`);
 
   for (;;) {
@@ -98,6 +100,8 @@ async function main() {
       if (t.asked) log(`tokens: ${t.resolved}/${t.asked} resolved from chain`);
       const f = await syncFees(pool);
       if (f.decoded || f.unknown) log(`fees: ${f.decoded} decoded, ${f.unknown} unknown`);
+      const rw = await syncRewards(pool, merklPaced, Number(process.env.MERKL_MAKERS_PER_PASS ?? 60));
+      if (rw.checked || rw.errors) log(`rewards: ${rw.checked} makers checked on Merkl, ${rw.withRewards} paid, ${rw.errors} errors`);
       const pl = await syncPools(pool, dexGateway, config.dexes, config.pageSize);
       if (pl.calls) log(`pools: ${pl.routed} pairs routed, ${pl.pools} pools, +${pl.swaps} swaps, ${pl.calls} gateway calls`);
     } catch (err) {

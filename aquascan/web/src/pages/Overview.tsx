@@ -46,7 +46,7 @@ export function Overview() {
         <div className="hero-stat primary">
           <div className="l" title="Each fill re-marked at the pool's price five minutes later, once the market had re-priced">Makers' result, 5 min after their fills</div>
           <div className="v">{h.markout_5m_usd.value === null ? <span className="text-ink-faint">not yet marked</span> : <span className={h.markout_5m_usd.value < 0 ? "loss" : "gain"}>{tilde}{usd(h.markout_5m_usd.value, true)}</span>}</div>
-          <div className="b">{h.markout_5m_bps ? <>{bandText(h.markout_5m_bps)} of what they traded</> : <>&nbsp;</>}</div>
+          <div className="b">{h.markout_5m_bps ? <>{bandText(h.markout_5m_bps)} of what they traded. Fees are the revenue side of making; this is the cost side.</> : <>&nbsp;</>}</div>
         </div>
       </div>
 

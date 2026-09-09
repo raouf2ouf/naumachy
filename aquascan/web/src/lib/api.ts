@@ -24,7 +24,9 @@ export interface Overview {
 export interface MakerTemplate { template: string; name: string | null; kind: string | null; strategies: number; live: number; volume_usd: number | null; instructions?: string[] | null }
 export interface MakerSummary extends Scored { chain: Chain; maker: string; maker_label?: string | null; pairs?: DeskPair[]; templates?: MakerTemplate[]; fills: number; maker_fee_bps: number | null }
 export interface DeskPair { base_token: string; quote_token: string; base_symbol: string | null; quote_symbol: string | null; fills: number; share: number }
-export interface MakerRow extends MakerSummary { templates_count: number; strategies: number; live: number; pnl_usd_marked: Priced; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
+export interface MakerPnl { realised_usd: Priced; unrealised_usd: Priced; fills: number; unpriced_fills: number; mark_hour: number | null }
+export interface PnlToken { token: string; symbol: string | null; position: number; basis_usd: number | null; realised_usd: number; unrealised_usd: number | null; mark_usd: number | null; mark_hour: number | null; legs: number }
+export interface MakerRow extends MakerSummary { templates_count: number; strategies: number; live: number; pnl_usd_marked: Priced; pnl: MakerPnl; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; first_seen: number | null; last_seen: number | null }
 export interface Series { window: string; chain: string; rollup_at: string; source: string; days: { day: number; date: string; fills: number; volume_usd: number | null; edge_usd: number | null; markout_5m_usd: number | null; markout_1h_usd: number | null; drift_1h_usd: number | null; protocol_fee_usd: number | null; maker_fee_usd: number | null }[] }
 export interface PnlQuote { value: number; quote_token: string; quote_symbol?: string | null; coverage: number; mark_age_s?: number | null; source: string }
 export interface StrategyRow extends Scored { id: string; template?: string; template_name?: string | null; strategy_hash: string; registry: string; status: string; shipped_at: number; docked_at: number | null; fills: number; maker_fee_bps: number | null; protocol_fee_bps: number | null; pnl_quote: PnlQuote | null; takers: number; top_taker_share: number | null; self_fills: number }
@@ -32,10 +34,17 @@ export interface FillRow { id: string; tx: string; block: number; ts: number; ta
 export interface Leg { token: string; symbol: string | null; decimals: number | null; net: string; pushed: string; pulled: string }
 export interface DeskFees { decoded: number; strategies: number; maker_fee_bps: number | null; maker_fee_bps_min: number | null; maker_fee_bps_max: number | null; maker_kinds: string[]; maker_sides: string[]; protocol_fee_bps_min: number | null; protocol_fee_bps_max: number | null; protocol_recipients: string[]; protocol_kinds: string[] }
 export interface MakerTemplateRow extends Omit<MakerTemplate, "volume_usd">, Scored { fills: number; maker_fee_bps: number | null }
-export interface MakerDetailFull extends Omit<MakerRow, "strategies" | "templates"> { templates: MakerTemplateRow[]; strategies: StrategyRow[]; strategies_total: number; fees: DeskFees; recent_fills: FillRow[] }
+export interface RewardToken { token: string; symbol: string | null; amount: number; claimed: number; pending: number; usd: number | null; campaigns: number }
+export interface MakerRewards { checked_at: string; total_usd: number | null; tokens: RewardToken[] }
+export interface MakerDetailFull extends Omit<MakerRow, "strategies" | "templates"> { templates: MakerTemplateRow[]; strategies: StrategyRow[]; strategies_total: number; fees: DeskFees; recent_fills: FillRow[]; pnl_tokens: PnlToken[]; rewards: MakerRewards | null }
 export interface Mark { base_token: string; base_symbol: string | null; quote_token: string; quote_symbol: string | null; price: number | null; vwap_raw: number; fills: number; mark_ts: number }
 export interface StrategyFees { decoded: boolean; maker_fee_bps: number | null; maker_fee_side: string | null; maker_fee_kind: string | null; protocol_fee_bps: number | null; protocol_fee_to: string | null; protocol_fee_kind: string | null; protocol_fee_provider: string | null }
+export type CardRole = "gate" | "branch" | "fee" | "curve" | "balances" | "guard" | "time" | "salt" | "other";
+export interface CardInstruction { at: number; opcode: number; name: string; role: CardRole; text: string; fields: Record<string, string | number | boolean | null>; target?: number; wraps?: boolean; landing?: boolean }
+export interface Curve { kind: "xyc" | "concentrated" | "limit"; base: string; quote: string; base_symbol: string | null; quote_symbol: string | null; spot: number | null; min: number | null; max: number | null; base_balance: number | null; quote_balance: number | null; liquidity: number | null; balances_from: "ship" | "program"; depth: { size: number; buy: number | null; sell: number | null }[] }
+export interface ProgramCard { dialect: string | null; parsed: boolean; instructions: CardInstruction[]; curve: Curve | null }
 export interface StrategyDetail {
+  card: ProgramCard;
   chain: Chain; id: string; strategy_hash: string; registry: string; maker: string; maker_label: string | null; app: string; app_label: string | null; desk: string; template: string; template_name: string | null; template_kind: string | null; instructions: string[] | null; fills_total: number; program: string; parsed: boolean;
   tokens: string[]; amounts: string[]; shipped_at: number; shipped_tx: string; docked_at: number | null; docked_tx: string | null; status: string;
   fees: StrategyFees | null;

@@ -1,4 +1,5 @@
 import type pg from "pg";
+import { decodeProgram } from "./swapvm.js";
 import { priced, refSource, windowSeconds, type Priced } from "./provenance.js";
 
 type Pool = pg.Pool;
@@ -251,8 +252,22 @@ function makerRow(m: Record<string, unknown>, at: Date) {
     templates_count: Number(m.templates), strategies: Number(m.strategies), live: Number(m.live), fills: Number(m.fills),
     ...scored(m, pr, tape, at),
     pnl_usd_marked: priced(m.pnl_usd_marked as number, pr, at, "latest defillama prices"),
+    pnl: makerPnl(m, at),
     maker_fee_bps: num(m.maker_fee_bps), maker_fee_bps_min: num(m.maker_fee_bps_min), maker_fee_bps_max: num(m.maker_fee_bps_max),
     first_seen: num(m.first_seen), last_seen: num(m.last_seen),
+  };
+}
+
+// Realised and unrealised by average cost since the maker was first seen on Aqua; the coverage is the
+// share of its economic fills the walk could price.
+function makerPnl(m: Record<string, unknown>, at: Date) {
+  const fills = Number(m.pnl_fills ?? 0), unpriced = Number(m.pnl_unpriced_fills ?? 0);
+  const cov = fills + unpriced > 0 ? fills / (fills + unpriced) : 0;
+  const src = "average cost over the fills, hourly prices, the fill's own rate for the second leg";
+  return {
+    realised_usd: priced(m.realised_usd as number | null, cov, at, src),
+    unrealised_usd: priced(m.unrealised_usd as number | null, cov, at, "open position at latest defillama prices against its average cost"),
+    fills, unpriced_fills: unpriced, mark_hour: num(m.pnl_mark_hour),
   };
 }
 
@@ -304,8 +319,27 @@ export async function maker(pool: Pool, chain: string, address: string, offset =
     FROM fills f JOIN strategies s ON s.chain = f.chain AND s.id = f.strategy_id
     LEFT JOIN fill_values v ON v.chain = f.chain AND v.fill_id = f.id
     WHERE f.chain = $1 AND s.maker = $2 AND f.economic ORDER BY f.ts DESC LIMIT 50`, [chain, a]);
+  const { rows: rewardRows } = await pool.query(`
+    SELECT r.token, r.symbol, r.decimals, r.amount::text AS amount, r.claimed::text AS claimed, r.pending::text AS pending, r.price_usd, r.campaigns, r.fetched_at, c.checked_at
+    FROM maker_rewards_checked c LEFT JOIN maker_rewards r ON r.maker = c.maker WHERE c.maker = $1 ORDER BY r.symbol`, [a]);
+  const rewardTokens = rewardRows.filter((r) => r.token !== null).map((r) => {
+    const units = Number(r.amount) / 10 ** Number(r.decimals ?? 18);
+    return { token: r.token as string, symbol: (r.symbol as string | null) ?? null, amount: units, claimed: Number(r.claimed) / 10 ** Number(r.decimals ?? 18), pending: Number(r.pending) / 10 ** Number(r.decimals ?? 18),
+      usd: r.price_usd === null ? null : units * Number(r.price_usd), campaigns: Number(r.campaigns) };
+  });
+  const rewards = rewardRows.length === 0 ? null : {
+    checked_at: (rewardRows[0].checked_at as Date).toISOString(),
+    total_usd: rewardTokens.every((t) => t.usd !== null) ? rewardTokens.reduce((acc, t) => acc + (t.usd ?? 0), 0) : null,
+    tokens: rewardTokens,
+  };
+  const { rows: pnlTokens } = await pool.query(`
+    SELECT p.token, t.symbol, t.decimals, p.position, p.basis_usd, p.realised_usd, p.unrealised_usd, p.mark_usd, p.mark_hour, p.legs
+    FROM maker_pnl p LEFT JOIN tokens t ON t.chain = p.chain AND t.address = p.token
+    WHERE p.chain = $1 AND p.maker = $2 ORDER BY abs(p.realised_usd) + abs(coalesce(p.unrealised_usd, 0)) DESC LIMIT 40`, [chain, a]);
   return {
-    ...makerRow(m, at), pairs,
+    ...makerRow(m, at), pairs, rewards,
+    pnl_tokens: pnlTokens.map((r) => ({ token: r.token, symbol: (r.symbol as string | null) ?? null, position: Number(r.position), basis_usd: num(r.basis_usd), realised_usd: Number(r.realised_usd),
+      unrealised_usd: num(r.unrealised_usd), mark_usd: num(r.mark_usd), mark_hour: num(r.mark_hour), legs: Number(r.legs) })),
     templates: tps.map((d) => ({ template: d.template, name: (d.template_name as string | null) ?? null, kind: (d.template_kind as string | null) ?? null, instructions: (d.instructions as string[] | null) ?? null,
       strategies: Number(d.strategies), live: Number(d.live), fills: Number(d.fills), ...scored(d, d.priced_ratio, ratio(d.tape_fills, Number(d.fills) * Number(d.priced_ratio)), at), maker_fee_bps: num(d.maker_fee_bps) })),
     strategies_total: Number(m.strategies),
@@ -399,7 +433,7 @@ function fillRow(f: Record<string, unknown>, at: Date) {
 export async function strategy(pool: Pool, chain: string, id: string, offset = 0, limit = 50) {
   const at = await rollupAt(pool);
   const { rows: [s] } = await pool.query(`
-    SELECT s.*, encode(s.program, 'hex') AS program_hex, tp.name AS template_name, tp.kind AS template_kind, tp.instructions, la.label AS app_label, lm.label AS maker_label,
+    SELECT s.*, encode(s.program, 'hex') AS program_hex, s.amounts::text[] AS amounts_text, tp.name AS template_name, tp.kind AS template_kind, tp.instructions, la.label AS app_label, lm.label AS maker_label,
            st.fills, st.first_fill_ts, st.last_fill_ts, st.volume_usd, st.edge_usd, st.markout_5m_usd, st.markout_1h_usd, st.markout_24h_usd, st.drift_1h_usd, st.drift_24h_usd,
            st.protocol_fee_usd, st.maker_fee_usd, st.tape_fills, st.priced_fills,
            st.markout_5m_bps, st.markout_5m_bps_se, st.markout_1h_bps, st.markout_1h_bps_se,
@@ -425,7 +459,14 @@ export async function strategy(pool: Pool, chain: string, id: string, offset = 0
     ORDER BY f.ts DESC LIMIT $3 OFFSET $4`, [chain, s.id, limit, offset]);
   const { rows: [tq] } = await pool.query(`SELECT symbol, decimals FROM tokens WHERE chain = $1 AND address = $2`, [chain, s.quote_token ?? ""]);
   const tape = ratio(s.tape_fills, s.priced_fills);
+  // the program card: every token the program or the ship mentions, with symbol and decimals
+  const mentioned = new Set<string>((s.tokens as string[]).map((t) => t.toLowerCase()));
+  for (const m of (s.program_hex as string).matchAll(/[0-9a-f]{40}/g)) mentioned.add("0x" + m[0]);
+  const { rows: toks } = await pool.query(`SELECT address, symbol, decimals FROM tokens WHERE chain = $1 AND address = ANY($2::text[])`, [chain, [...mentioned]]);
+  const tokenInfo = Object.fromEntries(toks.map((t) => [t.address, { symbol: (t.symbol as string | null) ?? null, decimals: t.decimals === null ? null : Number(t.decimals) }]));
+  const card = decodeProgram("0x" + s.program_hex, s.app, tokenInfo, { tokens: s.tokens, amounts: s.amounts_text as string[] });
   return {
+    card,
     chain, id: s.id, strategy_hash: s.strategy_hash, registry: s.registry, maker: s.maker, maker_label: s.maker_label ?? null, app: s.app, app_label: s.app_label ?? null,
     desk: s.desk, template: s.template, template_name: s.template_name ?? null, template_kind: s.template_kind ?? null, instructions: s.instructions ?? null, fills_total: Number(s.fills ?? 0),
     program: "0x" + s.program_hex, parsed: s.parsed, tokens: s.tokens, amounts: s.amounts, shipped_at: Number(s.shipped_at), shipped_tx: s.shipped_tx,

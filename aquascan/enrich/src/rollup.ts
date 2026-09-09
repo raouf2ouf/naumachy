@@ -1,4 +1,5 @@
-import type { Pool } from "./db.js";
+import { upsertRows, type Pool } from "./db.js";
+import { emptyBook, priceFill, trade, unrealised, type Book, type LegIn } from "./pnl.js";
 
 // Symbols treated as the numeraire when a strategy touches them. Upper case; matched on token symbol.
 export const STABLE_SYMBOLS = [
@@ -438,6 +439,71 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
       LEFT JOIN strategy_fees sf ON sf.chain = s.chain AND sf.strategy_id = s.id
       LEFT JOIN m_prec mp ON mp.chain = s.chain AND mp.maker = s.maker
       GROUP BY s.chain, s.maker, mp.m5, mp.m5_se, mp.m1h, mp.m1h_se`);
+
+    // 5d. maker P&L: realised and unrealised by average cost, walking the legs of every economic fill
+    // in time order per chain. Fills are priced self-financing (see pnl.ts); marks are the latest
+    // hourly prices already gathered for the strategy stats.
+    await client.query(`DELETE FROM maker_pnl`);
+    const { rows: pnlChains } = await client.query(`SELECT DISTINCT chain FROM fills WHERE economic ORDER BY chain`);
+    for (const { chain } of pnlChains as { chain: string }[]) {
+      const { rows: marks } = await client.query(`SELECT token, usd, hour FROM latest_prices WHERE chain = $1`, [chain]);
+      const mark = new Map<string, { usd: number; hour: number }>(marks.map((m) => [m.token, { usd: Number(m.usd), hour: Number(m.hour) }]));
+      const books = new Map<string, Book>();                       // maker|token
+      const fillsByMaker = new Map<string, { priced: number; unpriced: number }>();
+      let afterTs = 0, afterId = "";
+      for (;;) {
+        const { rows } = await client.query(`
+          SELECT f.id, f.ts, s.maker, l.token, l.net::text AS net, t.decimals, upper(t.symbol) AS symbol, p.usd
+          FROM (SELECT id, ts, strategy_id FROM fills WHERE chain = $1 AND economic AND (ts, id) > ($2, $3) ORDER BY ts, id LIMIT 20000) f
+          JOIN strategies s ON s.chain = $1 AND s.id = f.strategy_id
+          JOIN legs l ON l.chain = $1 AND l.fill_id = f.id
+          LEFT JOIN tokens t ON t.chain = $1 AND t.address = l.token
+          LEFT JOIN prices p ON p.chain = $1 AND p.token = l.token AND p.hour = (f.ts / 3600) * 3600
+          ORDER BY f.ts, f.id, l.token`, [chain, afterTs, afterId]);
+        if (rows.length === 0) break;
+        let i = 0;
+        while (i < rows.length) {
+          const fillId = rows[i].id; const maker = rows[i].maker;
+          const legs: LegIn[] = [];
+          while (i < rows.length && rows[i].id === fillId) {
+            const r = rows[i++];
+            const qty = r.decimals === null ? 0 : Number(r.net) / 10 ** Number(r.decimals);
+            const rank = STABLE_SYMBOLS.includes(r.symbol) ? 0 : MAJOR_SYMBOLS.includes(r.symbol) ? 1 : 2;
+            legs.push({ token: r.token, qty, usd: r.usd === null || r.decimals === null ? null : Number(r.usd), rank });
+          }
+          afterTs = Number(rows[i - 1].ts); afterId = fillId;
+          const tally = fillsByMaker.get(maker) ?? { priced: 0, unpriced: 0 };
+          const priced = priceFill(legs);
+          if (!priced) { tally.unpriced += 1; fillsByMaker.set(maker, tally); continue; }
+          tally.priced += 1; fillsByMaker.set(maker, tally);
+          for (const l of priced) {
+            const key = `${maker}|${l.token}`;
+            const b = books.get(key) ?? emptyBook();
+            trade(b, l.qty, l.price);
+            books.set(key, b);
+          }
+        }
+      }
+      const pnlRows: unknown[][] = [];
+      const perMaker = new Map<string, { realised: number; unrealised: number | null; markHour: number | null }>();
+      for (const [key, b] of books) {
+        const [maker, token] = key.split("|");
+        const m = mark.get(token) ?? null;
+        const u = unrealised(b, m?.usd ?? null);
+        pnlRows.push([chain, maker, token, b.position, b.position === 0 ? null : b.basis, b.realised, u, m?.usd ?? null, m?.hour ?? null, b.legs]);
+        const agg = perMaker.get(maker) ?? { realised: 0, unrealised: 0, markHour: null };
+        agg.realised += b.realised;
+        if (u === null) agg.unrealised = null; else if (agg.unrealised !== null) agg.unrealised += u;
+        if (b.position !== 0 && m) agg.markHour = agg.markHour === null ? m.hour : Math.min(agg.markHour, m.hour);
+        perMaker.set(maker, agg);
+      }
+      await upsertRows(client, "maker_pnl", ["chain", "maker", "token", "position", "basis_usd", "realised_usd", "unrealised_usd", "mark_usd", "mark_hour", "legs"], ["chain", "maker", "token"], pnlRows);
+      for (const [maker, agg] of perMaker) {
+        const t = fillsByMaker.get(maker) ?? { priced: 0, unpriced: 0 };
+        await client.query(`UPDATE maker_stats SET realised_usd = $3, unrealised_usd = $4, pnl_fills = $5, pnl_unpriced_fills = $6, pnl_mark_hour = $7 WHERE chain = $1 AND maker = $2`,
+          [chain, maker, agg.realised, agg.unrealised, t.priced, t.unpriced, agg.markHour]);
+      }
+    }
 
     // 6. daily stats
     await client.query(`DELETE FROM daily_stats`);

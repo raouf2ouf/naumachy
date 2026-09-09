@@ -5,6 +5,7 @@ import { api, type Chain, type Leg, type StrategyFees } from "../lib/api";
 import { absTime, amount, compact, feeBps, percent, relTime, shortAddr, usd } from "../lib/format";
 import { Addr, ChainChip, Failed, Loading, Money, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
 import { FillLine, ScoreTiles } from "./MakerDetail";
+import { ProgramCard } from "../components/ProgramCard";
 
 function LegsSentence({ legs }: { legs: Leg[] }) {
   const received = legs.filter((l) => !l.net.startsWith("-") && l.net !== "0");
@@ -92,14 +93,12 @@ export function StrategyDetail() {
         </Section>
       )}
 
-      <Section title="Program">
-        <div className="panel px-5 py-4 text-[13px]">
-          <p>{bytes} bytes of SwapVM bytecode, {s.parsed ? <span className="chip">parsed</span> : <span className="chip warn">not parsed</span>}{s.instructions && <>: <span className="mono text-ink-muted">{s.instructions.join(" > ")}</span></>}. Declared starting inventory: {s.tokens.length === 0 ? "none" : s.tokens.map((t, i) => <span key={t} className="mono">{i > 0 ? ", " : ""}{shortAddr(t)} × {compact(Number(s.amounts[i]), 3)} raw</span>)}.</p>
-          <details className="mt-3">
-            <summary className="cursor-pointer text-ink-muted">Raw bytes</summary>
-            <pre className="mono text-xs mt-2 whitespace-pre-wrap break-all text-ink-muted">{s.program}</pre>
-          </details>
-        </div>
+      <Section title="Program" description="What the maker wrote, instruction by instruction, in the order the router runs them. A fee or a guard placed before the curve wraps it: the swap is priced inside, then the wrapper takes its cut or checks its rule.">
+        <ProgramCard card={s.card} bytes={bytes} />
+        <details className="mt-2 text-[13px]">
+          <summary className="cursor-pointer text-ink-muted">Raw bytes{s.instructions && <span className="mono text-ink-faint"> · {s.instructions.join(" > ")}</span>}</summary>
+          <pre className="mono text-xs mt-2 whitespace-pre-wrap break-all text-ink-muted">{s.program}</pre>
+        </details>
       </Section>
 
       <Section title="Economic fills" aside={`${s.fills.length} of ${s.fills_total}, newest first`}>

@@ -95,6 +95,9 @@ Repo, `CLAUDE.md`, plan, lessons, interfaces, decisions, commit queue.
 ### M6 - Instruments
 
 - Substreams package for the chains Studio does not serve, replayed by the enrichment (GA.1). Done 2026-09-08 for Robinhood Chain.
+- Maker result: realised and unrealised by average cost per maker and chain, per-token book on the maker page, "versus holding" tile. Done 2026-09-09.
+- Program card: every strategy read back instruction by instruction with a depth chart for the curve families. Done 2026-09-09.
+- Rewards: what each maker earned from the 1inch incentive programme, read from Merkl, next to fees and adverse selection. Done 2026-09-09 (maker page).
 - Aquascan MCP server and the analyst (GB.2 for Aquascan).
 - Markouts 1h/24h, taker stats and self-trade flag, labels for the top makers.
 - Overview polish for cognitive load.

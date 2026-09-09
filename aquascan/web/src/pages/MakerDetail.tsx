@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { api, type Band, type Chain, type DeskFees, type FillRow, type Priced } from "../lib/api";
+import { api, type Band, type Chain, type DeskFees, type FillRow, type MakerPnl, type MakerRewards, type PnlToken, type Priced } from "../lib/api";
 import { bandText, bps, compact, feeBps, percent, shortAddr, usd } from "../lib/format";
 import { Addr, ChainChip, EdgeCell, Failed, Loading, Money, Pairs, Provenance, RegistryChip, Section, StatusDot, When } from "../components/ui";
 
@@ -26,7 +26,7 @@ export function ScoreTiles({ s, volumeLabel = "Volume" }: { s: { volume_usd: Pri
       <Score label="Edge at fill" p={s.edge_usd} signed sub={bps(s.edge_usd.value, v)} />
       <Score label="Marked 1 hour later" p={s.markout_1h_usd} signed sub={bandText(s.markout_1h_bps)} />
       <Score label="Marked 1 day later" p={s.markout_24h_usd} signed sub={bps(s.markout_24h_usd.value, v)} />
-      <Score label="Position at latest prices" p={s.pnl_usd_marked} signed />
+      <Score label="Versus holding" p={s.pnl_usd_marked} signed />
     </div>
   );
 }
@@ -47,6 +47,57 @@ export function FillLine({ f, children }: { f: FillRow; children?: React.ReactNo
       {f.taker && <span className="text-ink-faint">taker <span className="mono">{shortAddr(f.taker)}</span></span>}
       <When ts={f.ts} className="text-ink-faint ml-auto" />
     </div>
+  );
+}
+
+// What the maker made: realised on closed round trips, unrealised on what it still holds, both by
+// average cost since it was first seen on Aqua. Their sum is the position marked at latest prices,
+// the figure liquidity providers know as impermanent loss when it is negative.
+function ResultPanel({ pnl, fees, tokens, rewards }: { pnl: MakerPnl; fees: Priced; tokens: PnlToken[]; rewards: MakerRewards | null }) {
+  const open = tokens.filter((t) => Math.abs(t.position) > 0);
+  const total = pnl.realised_usd.value !== null && pnl.unrealised_usd.value !== null ? pnl.realised_usd.value + pnl.unrealised_usd.value : null;
+  const paid = rewards?.tokens.filter((t) => t.amount > 0) ?? [];
+  const rewardsUsd = rewards?.total_usd ?? null;
+  return (
+    <Section title="Result" description="Realised on the round trips it closed, unrealised on what it still holds, by average cost since its first fill here. Fees are inside the legs, not added again. Their sum is the versus-holding figure above, what liquidity providers call impermanent loss when it is negative.">
+      <div className="scores result">
+        <div className="primary"><div className="l">Made so far</div><div className="v">{total === null ? <span className="text-ink-faint">unpriced</span> : <span className={total > 0 ? "gain" : total < 0 ? "loss" : ""}>{usd(total, true)}</span>}</div>
+          <div className="b">{pnl.fills > 0 ? <>{compact(pnl.fills, 0)} fills priced{pnl.unpriced_fills > 0 && <>, {compact(pnl.unpriced_fills, 0)} not</>}</> : "no priced fill"}</div></div>
+        <Score label="Realised" p={pnl.realised_usd} signed sub="round trips closed" />
+        <Score label="Unrealised" p={pnl.unrealised_usd} signed sub={open.length ? `${open.length} token${open.length > 1 ? "s" : ""} open` : "nothing open"} />
+        <Score label="Of which fees" p={fees} sub="kept by the maker" />
+        <div>
+          <div className="l">Plus rewards</div>
+          <div className="v">{rewards === null ? <span className="text-ink-faint" title="Merkl not read yet for this wallet">not read yet</span> : paid.length === 0 ? <span className="text-ink-faint">none</span> : rewardsUsd === null ? <span className="text-ink-faint">unpriced</span> : <span className="fee">{usd(rewardsUsd)}</span>}</div>
+          <div className="b">{paid.length > 0 ? paid.map((t) => `${compact(t.amount, 0)} ${t.symbol ?? ""}`).join(" + ") : "1inch incentive programme, via Merkl"}</div>
+        </div>
+      </div>
+      {paid.length > 0 && total !== null && rewardsUsd !== null && (
+        <p className="mt-3 text-[13px] text-ink-muted">
+          The incentive programme pays makers on the volume their 1INCH-paired positions handle, claimed on Ethereum whichever network they quoted on, so rewards belong to the wallet rather than to this chain. With them, the wallet made <span className={total + rewardsUsd > 0 ? "gain" : "loss"}>{usd(total + rewardsUsd, true)}</span> here{rewardsUsd > Math.abs(total) ? ", the rewards being the larger part" : ""}. Read from Merkl {new Date(rewards!.checked_at).toISOString().slice(0, 16).replace("T", " ")} UTC.
+        </p>
+      )}
+      {tokens.length > 0 && (
+        <div className="overflow-x-auto panel mt-3">
+          <table>
+            <thead><tr><th>Token</th><th className="num">Position</th><th className="num">Average cost</th><th className="num">Latest price</th><th className="num">Realised</th><th className="num">Unrealised</th><th className="num">Legs</th></tr></thead>
+            <tbody>
+              {tokens.map((t) => (
+                <tr key={t.token}>
+                  <td><span className="mono" title={t.token}>{t.symbol ?? shortAddr(t.token)}</span></td>
+                  <td className="num">{t.position === 0 ? <span className="text-ink-faint">flat</span> : <span className={t.position < 0 ? "text-ink-muted" : ""}>{t.position > 0 ? "+" : ""}{compact(t.position, 4)}</span>}</td>
+                  <td className="num text-ink-muted">{t.basis_usd === null ? "" : usd(t.basis_usd)}</td>
+                  <td className="num text-ink-muted">{t.mark_usd === null ? <span className="text-ink-faint">no mark</span> : usd(t.mark_usd)}</td>
+                  <td className="num"><span className={t.realised_usd > 0 ? "gain" : t.realised_usd < 0 ? "loss" : ""}>{usd(t.realised_usd, true)}</span></td>
+                  <td className="num text-ink-muted">{t.unrealised_usd === null ? (t.position === 0 ? <span className="text-ink-faint">0</span> : <span className="text-ink-faint">no mark</span>) : usd(t.unrealised_usd, true)}</td>
+                  <td className="num text-ink-muted">{compact(t.legs, 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -91,6 +142,7 @@ export function MakerDetail() {
 
       <ScoreTiles s={d} volumeLabel="Volume, all time" />
       <FeePanel fees={d.fees} makerFee={d.maker_fee_usd} protocolFee={d.protocol_fee_usd} volume={d.volume_usd} />
+      <ResultPanel pnl={d.pnl} fees={d.maker_fee_usd} tokens={d.pnl_tokens} rewards={d.rewards} />
 
       <Section title="Templates" description="The shapes of the programs this maker ships here: the opcode sequence with the arguments ignored. A maker re-ships the same template many times with new parameters.">
         <div className="overflow-x-auto panel">
