@@ -10,6 +10,10 @@ import { rpcHead, streamAquaBlocks, type AquaBlock, type DockedEvent, type LegEv
 
 export const HEAD_LAG_BLOCKS = 1000;   // about two minutes on Robinhood Chain; reorgs never reach that deep
 const COMMIT_EVERY_BLOCKS = 200;
+// A pass asks for at most this many blocks, so the stream ends by itself at its stop block: a stream
+// cut by an abort stays counted as an open session on the provider for a while, and the free tier
+// allows two, so two cut passes in a row lock the lane out until they expire.
+const PASS_BLOCKS = Number(process.env.SUBSTREAMS_PASS_BLOCKS ?? 1_500_000);
 
 // A first read of a chain spans tens of millions of blocks while the provider builds its cache; each
 // pass gives the stream this long, commits the cursor, and lets the rest of the loop run.
@@ -20,7 +24,7 @@ export async function syncAqua(pool: Pool, cfg: AquaLaneConfig): Promise<AquaLan
   const head = await rpcHead(cfg.rpc);
   const { rows: [c] } = await pool.query(`SELECT substreams_cursor, fills_cursor_block FROM chains WHERE name = $1`, [cfg.chain]);
   const stats: AquaLaneStats = { blocks: 0, shipped: 0, docked: 0, legs: 0, cursor: Number(c.fills_cursor_block), head };
-  const stopBlock = head - HEAD_LAG_BLOCKS;
+  const stopBlock = Math.min(head - HEAD_LAG_BLOCKS, stats.cursor + PASS_BLOCKS);
   if (stats.cursor >= stopBlock) return stats;
 
   const client = await pool.connect();
