@@ -444,7 +444,14 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
     // in time order per chain. Fills are priced self-financing (see pnl.ts); marks are the latest
     // hourly prices already gathered for the strategy stats.
     await client.query(`DELETE FROM maker_pnl`);
-    const { rows: pnlChains } = await client.query(`SELECT DISTINCT chain FROM fills WHERE economic ORDER BY chain`);
+    // one pass over fills and strategies up front; pages then come off a small indexed table and
+    // the legs of a page are fetched by id, so no page re-scans the chain
+    await client.query(`
+      CREATE TEMP TABLE pnl_fills ON COMMIT DROP AS
+      SELECT f.chain, f.id, f.ts, s.maker FROM fills f JOIN strategies s ON s.chain = f.chain AND s.id = f.strategy_id WHERE f.economic`);
+    await client.query(`CREATE INDEX ON pnl_fills (chain, ts, id)`);
+    await client.query(`ANALYZE pnl_fills`);
+    const { rows: pnlChains } = await client.query(`SELECT DISTINCT chain FROM pnl_fills ORDER BY chain`);
     for (const { chain } of pnlChains as { chain: string }[]) {
       const { rows: marks } = await client.query(`SELECT token, usd, hour FROM latest_prices WHERE chain = $1`, [chain]);
       const mark = new Map<string, { usd: number; hour: number }>(marks.map((m) => [m.token, { usd: Number(m.usd), hour: Number(m.hour) }]));
@@ -452,32 +459,32 @@ export async function rollup(pool: Pool): Promise<RollupStats> {
       const fillsByMaker = new Map<string, { priced: number; unpriced: number }>();
       let afterTs = 0, afterId = "";
       for (;;) {
-        const { rows } = await client.query(`
-          SELECT f.id, f.ts, s.maker, l.token, l.net::text AS net, t.decimals, upper(t.symbol) AS symbol, p.usd
-          FROM (SELECT id, ts, strategy_id FROM fills WHERE chain = $1 AND economic AND (ts, id) > ($2, $3) ORDER BY ts, id LIMIT 20000) f
-          JOIN strategies s ON s.chain = $1 AND s.id = f.strategy_id
+        const { rows: page } = await client.query(`
+          SELECT id, ts, maker FROM pnl_fills WHERE chain = $1 AND (ts, id) > ($2, $3) ORDER BY ts, id LIMIT 20000`, [chain, afterTs, afterId]);
+        if (page.length === 0) break;
+        const { rows: legRows } = await client.query(`
+          SELECT f.id, l.token, l.net::text AS net, t.decimals, upper(t.symbol) AS symbol, p.usd
+          FROM unnest($2::text[], $3::bigint[]) AS f(id, hour)
           JOIN legs l ON l.chain = $1 AND l.fill_id = f.id
           LEFT JOIN tokens t ON t.chain = $1 AND t.address = l.token
-          LEFT JOIN prices p ON p.chain = $1 AND p.token = l.token AND p.hour = (f.ts / 3600) * 3600
-          ORDER BY f.ts, f.id, l.token`, [chain, afterTs, afterId]);
-        if (rows.length === 0) break;
-        let i = 0;
-        while (i < rows.length) {
-          const fillId = rows[i].id; const maker = rows[i].maker;
-          const legs: LegIn[] = [];
-          while (i < rows.length && rows[i].id === fillId) {
-            const r = rows[i++];
+          LEFT JOIN prices p ON p.chain = $1 AND p.token = l.token AND p.hour = f.hour`,
+          [chain, page.map((r) => r.id), page.map((r) => Math.floor(Number(r.ts) / 3600) * 3600)]);
+        const legsByFill = new Map<string, Record<string, unknown>[]>();
+        for (const r of legRows) { const arr = legsByFill.get(r.id) ?? []; arr.push(r); legsByFill.set(r.id, arr); }
+        const rows = page.map((f) => ({ ...f, legs: legsByFill.get(f.id) ?? [] }));
+        for (const f of rows) {
+          const legs: LegIn[] = (f.legs as { token: string; net: string; decimals: number | null; symbol: string | null; usd: number | null }[]).map((r) => {
             const qty = r.decimals === null ? 0 : Number(r.net) / 10 ** Number(r.decimals);
-            const rank = STABLE_SYMBOLS.includes(r.symbol) ? 0 : MAJOR_SYMBOLS.includes(r.symbol) ? 1 : 2;
-            legs.push({ token: r.token, qty, usd: r.usd === null || r.decimals === null ? null : Number(r.usd), rank });
-          }
-          afterTs = Number(rows[i - 1].ts); afterId = fillId;
-          const tally = fillsByMaker.get(maker) ?? { priced: 0, unpriced: 0 };
+            const rank = r.symbol !== null && STABLE_SYMBOLS.includes(r.symbol) ? 0 : r.symbol !== null && MAJOR_SYMBOLS.includes(r.symbol) ? 1 : 2;
+            return { token: r.token, qty, usd: r.usd === null || r.decimals === null ? null : Number(r.usd), rank };
+          });
+          afterTs = Number(f.ts); afterId = f.id;
+          const tally = fillsByMaker.get(f.maker) ?? { priced: 0, unpriced: 0 };
           const priced = priceFill(legs);
-          if (!priced) { tally.unpriced += 1; fillsByMaker.set(maker, tally); continue; }
-          tally.priced += 1; fillsByMaker.set(maker, tally);
+          if (!priced) { tally.unpriced += 1; fillsByMaker.set(f.maker, tally); continue; }
+          tally.priced += 1; fillsByMaker.set(f.maker, tally);
           for (const l of priced) {
-            const key = `${maker}|${l.token}`;
+            const key = `${f.maker}|${l.token}`;
             const b = books.get(key) ?? emptyBook();
             trade(b, l.qty, l.price);
             books.set(key, b);
