@@ -3,6 +3,10 @@
 services:
   postgres:
     image: postgres:16
+    # The box has 16 GB and one gigabyte of fills to aggregate; the image's defaults (128 MB of
+    # buffers, 4 MB of work memory) made every uncached overview a seven-second scan.
+    command: ["postgres", "-c", "shared_buffers=3GB", "-c", "work_mem=64MB", "-c", "effective_cache_size=10GB", "-c", "maintenance_work_mem=512MB", "-c", "max_wal_size=2GB"]
+    shm_size: 2gb
     ports:
       - "127.0.0.1:5433:5432"
     environment:
