@@ -1,0 +1,1551 @@
+{
+ "source": "gym on an anvil fork of Base, 2026-09-07 to 09-09; reconstructed from the briefings kept in the generation files",
+ "generations": [
+  {
+   "generation": 0,
+   "closed": true,
+   "champion": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+   "field": [
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.404045,
+      "seUsd": 0,
+      "fills": 6
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC"
+      ],
+      "capBps": 2000,
+      "salt": "82777153798253479467318140280216905842341767857688664807769175802491231328311",
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 15,
+        "slopeBps": 100,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 50
+       },
+       {
+        "op": "xyc"
+       }
+      ]
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 15 bps at rest, +100 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 50x on WETH/USDC",
+      "@ 99  XYCSwap",
+      "@101  Salt"
+     ],
+     "rationale": "Seeded by the lanista: wide."
+    },
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.486036,
+      "seUsd": 0.280702,
+      "fills": 41
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "gate"
+       },
+       {
+        "op": "flatFee",
+        "bps": 8
+       },
+       {
+        "op": "anchor",
+        "depth": 100
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "33188883750340349750557044071796137241735877684439148783210913936020586927407"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  Gate: taker must hold an arena pass",
+      "@ 32  FlatFee 8 bps",
+      "@ 38  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@235  XYCSwap",
+      "@237  Salt"
+     ],
+     "rationale": "Seeded by the lanista: flat."
+    },
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.556748,
+      "seUsd": 1.237004,
+      "fills": 19
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC"
+      ],
+      "capBps": 2000,
+      "salt": "19544653518692556720920655676030656289908402616815073209059773390100876964507",
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 2,
+        "slopeBps": 400,
+        "maxBps": 40,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 200
+       },
+       {
+        "op": "xyc"
+       }
+      ]
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 2 bps at rest, +400 bps per full drain, max 40 bps, window 600 s",
+      "@ 28  OracleAnchor depth 200x on WETH/USDC",
+      "@ 99  XYCSwap",
+      "@101  Salt"
+     ],
+     "rationale": "Seeded by the lanista: tight."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 0.582154,
+      "seUsd": 0.248467,
+      "fills": 15
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC"
+      ],
+      "capBps": 2000,
+      "salt": "31224710816394240335981737192750925150139639535442788519214356895751888072331",
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 5,
+        "slopeBps": 200,
+        "maxBps": 50,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100
+       },
+       {
+        "op": "xyc"
+       }
+      ]
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 5 bps at rest, +200 bps per full drain, max 50 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC",
+      "@ 99  XYCSwap",
+      "@101  Salt"
+     ],
+     "rationale": "Seeded by the lanista: steady."
+    }
+   ]
+  },
+  {
+   "generation": 1,
+   "closed": true,
+   "champion": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+   "field": [
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.228033,
+      "seUsd": 0.15508,
+      "fills": 21
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "gate"
+       },
+       {
+        "op": "toxicityFee",
+        "baseBps": 4,
+        "slopeBps": 300,
+        "maxBps": 60,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 130,
+        "maxStaleness": 60
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "51199676756761703820351696165112330197625080500351556556684578716974393978877"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  Gate: taker must hold an arena pass",
+      "@ 32  ToxicityFee 4 bps at rest, +300 bps per full drain, max 60 bps, window 600 s",
+      "@ 50  OracleAnchor depth 130x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@247  XYCSwap",
+      "@249  Salt"
+     ],
+     "rationale": "My gated flat-8 desk leads the live board on total 5m markout (63 economic fills, ~1.99 USD, ~19 bps) because the gate filters toxic flow (only 20% of informed vs 60% of uninformed carry a pass), so passed flow is cleaner and I can win more quotes safely. I keep the gate as my proven edge but replace the static 8 bps with a toxicityFee that rests lower at 4 bps (wins more quotes than flat 8, growing volume and total markout) while a 300 bps/full-drain slope up to 60 bps prices out one-way informed drains that still slip through the gate. Anchor depth 130 with 60 s staleness keeps the three-pair prices coherent above the pools' loop discrepancy so the validator passes it and arbitrageurs don't take the drift. This mutates rival 'wide's gated toxicity design but keeps my incumbent gated three-pair desk that already accumulates the most markout by volume."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.689791,
+      "seUsd": 0.375811,
+      "fills": 28
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "gate"
+       },
+       {
+        "op": "toxicityFee",
+        "baseBps": 3,
+        "slopeBps": 350,
+        "maxBps": 55,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 130,
+        "maxStaleness": 60
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "12695514990747004183031811385694262763129585962946866894878211362447767510064"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  Gate: taker must hold an arena pass",
+      "@ 32  ToxicityFee 3 bps at rest, +350 bps per full drain, max 55 bps, window 600 s",
+      "@ 50  OracleAnchor depth 130x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@247  XYCSwap",
+      "@249  Salt"
+     ],
+     "rationale": "My gen-0 'wide' (15 bps flat) was too wide: only 6-7 fills. The two winning shapes were flat's gate (60 clean fills, best markout_usd 1.42) and steady's toxicity ramp (18 bps/fill). I fuse them. I keep flat's gate to trade away the toxic flow (only 20% of informed carry a pass vs 60% of uninformed), so I harvest mostly benign volume. On top I drop the base fee to 3 bps to win far more uninformed orders than a flat 8, and add a steep 350 bps/drain toxicity ramp (max 55) placed before the anchor so it measures drain on the real balance and prices out any informed passer trying one-way flow. Deep 130x anchor with 60s staleness keeps my three quotes coherent and slippage low so I stay competitive; three pairs multiply the clean fill count that drives total markout."
+    },
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.269289,
+      "seUsd": 0.504424,
+      "fills": 39
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 4,
+        "slopeBps": 350,
+        "maxBps": 60,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 150,
+        "maxStaleness": 60
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "19678799023028521161820383882614234846399400284310653061391901966935617470568"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 4 bps at rest, +350 bps per full drain, max 60 bps, window 600 s",
+      "@ 28  OracleAnchor depth 150x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Last gen my tight single-pair book (base 2, slope 400, depth 200) earned the most fills and a competitive score, and steady won on total markout. This round steady opened first with a 3-pair book at base 6/slope 300/depth 100. I take the same three markets to multiply my benign fill count from one ledger, but undercut steady's resting fee: base 4 bps sits tighter so I win the contested uninformed flow while still clearing the triangular-loop discrepancy (12 bps round trip, above the pools' 5 bps) so the fork validator passes. A steep 350 slope with 60 cap ramps hard against one-way informed drain, placed before the anchor so it measures pressure on my real balances. Depth 150 keeps quotes near oracle mid to beat the pool within takers' ~12 bps tolerance without over-exposing me given the low 6 bps realized vol; maxStaleness 60 guards against a stale reference."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 1.893009,
+      "seUsd": 0.464816,
+      "fills": 33
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 300,
+        "maxBps": 70,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 60
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "115743997876241947796288564505909763084240173034292551138219144916245365044338"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +300 bps per full drain, max 70 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I won gen0 as 'steady' (no gate, toxicityFee 5/200/50, depth 100) beating the gated flat-fee book. The one lever I left unused is breadth: flat proved a single inventory can quote all three pairs and captured the most volume, and total markout is edge times fills. So I keep my proven protective shape but extend it to all three markets from one ledger. ToxicityFee sits before the anchor so drains ramp on my real balance (fast defence against one-way informed flow); I nudge base to 6 and slope to 300 so the resting floor stays above the pools' cross-pair discrepancy and the loop USDC->WETH->cbBTC->USDC never pays, while max 70 prices out sustained informed drains. The anchor at depth 100 keeps the three prices coherent and centred on the pool, with maxStaleness 60s given ~13 prints/min so quotes track fresh price. No gate: my ungated book already out-marked the gated one, and I would rather earn on the 40% benign flow a gate throws away and let the toxicity ramp handle the toxic tail."
+    }
+   ]
+  },
+  {
+   "generation": 2,
+   "closed": true,
+   "champion": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+   "field": [
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.611324,
+      "seUsd": 0.832959,
+      "fills": 27
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 5,
+        "slopeBps": 450,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "22120633366522959100592070570901116178334648453069097073179954609270732299007"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 5 bps at rest, +450 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I am dropping the gate. My gated desk posted the lowest attested score both generations (0.486 gen0, 0.228 gen1) because the gate trades away 40% of the benign uninformed flow that lacks a pass, while the non-gated toxicity desks (steady, tight) won on both edge and volume. So I adopt the proven non-gated toxicityFee>anchor>xyc shape but differentiate: I rest at 5 bps, undercutting the rivals who already wrote this round at base 7-8 (steady 7, wide 8, tight 8), so I win the uninformed quote and grow volume/total markout, while a steeper slope of 450 bps per full drain up to 80 bps ramps faster than steady's 300 to price out one-way informed drains inside the 600s window. Anchor depth 120x with a fresh 45s staleness keeps the three pair prices coherent above the pools' loop discrepancy so the validator passes and arbitrageurs cannot take the drift. I keep the three-pair desk that already accumulates the most flow from one inventory."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.754867,
+      "seUsd": 0.521076,
+      "fills": 17
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 8,
+        "slopeBps": 400,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 110,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "54965143131047765384761515182588489314294345610863578487174532180473981783917"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 8 bps at rest, +400 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 110x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "My gated 'wide' cratered to 0.23-0.69 attested across gens 0-1: the pass gate threw away too much benign volume and my desk is now dormant (live 0). The record and the live tape both say the winner is the no-gate toxicity ramp: steady (no gate, fee 5-7, depth 100) leads at 20.9 bps/fill and won both closed generations, and edge-per-fill beats raw fill count (steady base6 > tight base4 in gen1 attested). So I abandon the gate entirely and adopt steady's lineage. I lift the base to 8 bps to bank more edge per fill while still sitting inside the ~12 bps mean tolerance to keep winning uninformed orders, and keep a steep 400 bps/drain ramp (max 80, before the anchor so it measures real-balance drain) to price out one-way informed flow. Depth 110 with 45s staleness keeps my three-pair quotes coherent and slippage low, and three markets from one ledger multiply the clean-fill count. This is steady, tuned tighter for edge and matched to tight's ramp steepness."
+    },
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.198121,
+      "seUsd": 0.550867,
+      "fills": 22
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 8,
+        "slopeBps": 400,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "62991042374082536256062306496431226422621757547100653670304815682937417706058"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 8 bps at rest, +400 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Two generations running, the champion 'steady' has beaten my tighter book with a higher resting fee: gen1 its base 6 earned 17.6 bps/fill vs my base 4's 13.6, and the gap was both the extra fee and better filtering of toxic fills \u2014 my six extra fills were adverse-selected. The desk data confirms markout rises with fee (venue is fee-positive, not bleeding). So I move up the proven curve rather than undercut. I take steady's winning template (no gate, 3 pairs from one ledger, toxicity>anchor>xyc) and mutate it: base 8 bps (one notch above steady's gen2 base 7) sits comfortably inside takers' ~12 bps tolerance so I still serve uninformed flow, while raising the price enough that informed takers, who only hit quotes beating the coming move, pick me off less. My real edge over steady is the defence dimension: slope 400 and max 80 (vs 300/70) ramp harder against one-way informed drain, placed before the anchor so the fee measures pressure on my real balances. Depth 120 (vs steady's 100) keeps quotes competitive on size to offset the higher fee's fill loss; maxStaleness 45 guards the reference. Base 8 clears the ~5 bps triangular-loop discrepancy so the fork validator passes."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 1.422961,
+      "seUsd": 0.83855,
+      "fills": 26
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 7,
+        "slopeBps": 300,
+        "maxBps": 70,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "114506448733797388445900390848976308969489641190894165143756186740194715313303"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 7 bps at rest, +300 bps per full drain, max 70 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I have won both closed generations as 'steady' and my desk shows the field's best 5-minute markout (19.5 bps vs tight's 15), so I keep the proven shape rather than chase fills: no gate (my ungated book out-marked every gated one), toxicityFee before the anchor so drains ramp on real balance for fast defence against one-way informed flow, anchor centring all three pairs on the pool for coherent cross-prices, xyc last. Two small tweaks over my gen1 winner: base fee 6->7 bps because edge per fill beat volume both rounds (tight's lower base earned more fills but less markout), and 7 still sits under the ~12 bps mean tolerance so I keep uninformed flow while lifting the resting floor safely above the cross-pair pool discrepancy so the USDC->WETH->cbBTC loop never pays; and maxStaleness 60->45s to track fresh price given ~15 prints/min and 13 bps realized vol. Slope 300/max 70 keeps ramping a full-drain fill (capped at 20%) by ~60 bps to price out sustained informed drains."
+    }
+   ]
+  },
+  {
+   "generation": 3,
+   "closed": true,
+   "champion": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+   "field": [
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.050216,
+      "seUsd": 1.858702,
+      "fills": 30
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 450,
+        "maxBps": 85,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 130,
+        "maxStaleness": 30
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "30108672604867278311604586850656545111353622198362714381193630777248525238849"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +450 bps per full drain, max 85 bps, window 600 s",
+      "@ 28  OracleAnchor depth 130x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Aquascan shows the two leaders (steady/tight desks) both sit near 21 bps markout on ~100 fills, while my base-5 desks kept losing on per-fill edge (~15 bps): chasing benign volume with a low resting fee just fed me to informed flow. So I stop undercutting and adopt the champion steady's proven non-gated toxicityFee>anchor>xyc shape at base 6, matching its resting edge, but tune two levers to beat it. First, a steeper slope of 450 bps per full drain (vs steady's 350) with max 85 ramps harder against one-way informed drains inside the 600s window, cutting adverse selection where the champion still bleeds. Second, I deepen the anchor to 130x and tighten maxStaleness to 30s: the pool moves ~14x/min at 403 bps realized vol, so a fresher re-centre plus lower slippage per fill wins more benign quotes AND keeps the three-pair loop coherent above the pools' discrepancy so the validator passes. Same one-inventory three-pair desk that accumulates the most flow, now with the champion's edge and stronger protection."
+    },
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.412097,
+      "seUsd": 0.784789,
+      "fills": 27
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 400,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 110,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "113550823886183720185064158428222336438893233731051421849125303577307571501006"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +400 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 110x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The record is unambiguous: across all three closed generations 'steady' won with base 6-7, depth ~100, no gate, three pairs, and the accumulated Aquascan desks confirm it \u2014 steady's desk marks 21.8 bps at avg fee 6.0, ahead of my own desk at 20.6 with a scattered avg fee 4.6. My past extremes both lost: base 4 (gen1) bled to adverse selection, base 8 (gen2) shed benign fills to steady's tighter book head-to-head. Since uninformed takers route to the single best quote and I write after steady this round (its gen3 is base 6/slope 350/max 75/depth 100), I match its resting base of 6 so I never lose the benign flow on price, then differentiate on the two dimensions that decide a tie: depth 110 (vs 100) gives a tighter effective price on size to pull the larger benign fills my way, and a harder toxicity ramp (slope 400/max 80 vs 350/75) prices informed one-way drain out faster \u2014 warranted given the pool's ~416 bps realized vol and ~14 moves/min. The fee sits before the anchor to measure pressure on real balances, maxStaleness 45 guards a fast-moving reference, and base 6 clears the ~5 bps triangular discrepancy so the fork validator passes."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 2.139901,
+      "seUsd": 0.730304,
+      "fills": 32
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "26474424117053884742469114699947273310539052848592816934155786644300175664996"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I have won all three closed generations with the ungated toxicityFee>anchor>xyc shape, and my desk still leads the field on accumulated volume and fills while tight leads only on a noisier per-fill bps. The whole field converged on my shape and clustered at base 8 / slope 400 / max 80 / depth ~120 in gen 2, which fragmented the uninformed flow and pulled everyone's attested scores down. So I move the other way: drop the resting floor from 7 to 6 bps to sit further under the ~12 bps mean tolerance and reclaim benign fills the crowd is pricing out (benign flow marks near flat, so those fills are almost pure edge), while raising slope 300->350 and max 70->75 so a one-way informed drain still ramps a capped 20% fill by ~70 bps and prices the tape-reader out fast. I keep the toxicityFee before the anchor so drains bite on my real balance for quick defence, keep depth 100 (conservative, less informed exposure than the rivals' 120-150), staleness 45s to track the fast tape, and 6 bps stays safely above the cross-pair pool discrepancy so the USDC->WETH->cbBTC loop never pays and the validator passes."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.904532,
+      "seUsd": 0.914511,
+      "fills": 25
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 5,
+        "slopeBps": 450,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 45
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "53555142491709256976599485990847306619256300812061802111288701996423366440201"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 5 bps at rest, +450 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The record and the live desks agree: the winner is the no-gate toxicity ramp on all three pairs anchored near depth 100-120. Steady's lineage leads the desk board at 21.5 bps/fill (base~6, depth100) and tight sits at 20.4 (base6, depth110). My gated 'wide' is dormant; I already abandoned the gate last gen but sat too wide at base8 and underscored. Since I write after this gen's tight (base6/slope400/depth110) and steady (base6/slope350/depth100), and takers route to the best quote, I undercut them to base5 to steal the shared uninformed flow and add fill count \u2014 the captured 5m markout is dominated by the anchor curve, not the 1 bp of fee, so trimming the base barely dents per-fill edge while winning more orders. To stay safe in this fast, high-vol tape (408 bps realized, 14 moves/min) I keep the ramp steep and before the anchor so it measures real-balance drain: slope450, max80, window600 prices out one-way informed flow after the first touch. Depth120 with 45s staleness tightens quotes for competitiveness and keeps the three prices coherent so the validator's loop stays unprofitable."
+    }
+   ]
+  },
+  {
+   "generation": 4,
+   "closed": true,
+   "champion": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+   "field": [
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 2.622698,
+      "seUsd": 0.600233,
+      "fills": 30
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 30
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "72092548791921306058559332814252716355005318011456627457294781703215874117043"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Steady's line has won every closed generation, and its gen4 program (base6/slope350/max75/depth100/staleness30) is the proven config. My past attempts to differentiate lost for identifiable reasons: gen1 base4 bled to adverse selection, gen2 base8 shed benign fills, and gen3 I ran depth110 with a HARDER ramp (400/80) but a STALE reference (maxStaleness45), so my deeper book got picked off by informed flow when the anchor lagged. This round I write after steady, so I copy its winning ramp exactly (base6 to never lose benign flow on resting price and to clear the ~5bps triangular discrepancy for the fork validator, slope350/max75 for its proven moderate defense) and improve on the single axis that decides a tie: depth120 vs its 100 gives a tighter effective price on larger sizes to pull the bigger benign fills my way. Crucially I pair the deeper book with a FRESH reference (maxStaleness30, matching steady), which is the real defense against the ~344bps-vol, ~15-moves/min tape: re-centering on the pool each quote means the extra depth adds benign capture without exposing a stale price to informed takers. This is the clean version of my gen3 idea with the staleness bug fixed."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.188307,
+      "seUsd": 0.547524,
+      "fills": 32
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 5,
+        "slopeBps": 450,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 30
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "42188391103903372182867797987105389560029553022043120598081321579025702848801"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 5 bps at rest, +450 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The record is unambiguous: steady's no-gate toxicity ramp anchored at depth100 has won all four closed generations, and the desk board confirms it (21.35 bps/fill at fee~6, depth100) while tight/wide at depth110-120 trail because deeper anchors mean more exposure when the reference is wrong and they get run over by informed flow in this fast, 340bps-realized tape. My own losses came from depth120 over-exposure, not the base fee. So I mutate the champion: I adopt its winning depth100 with staleness30 (fresh anchor, minimal arb loss) to fix my exposure mistake, and I undercut the resting fee to base5 versus both live rivals' base6. Since uninformed flow routes to the strictly best quote and I write after tight and steady, base5 makes me the best of the three on resting quotes, stealing the shared benign flow and adding fills; the captured 5m markout is dominated by the anchor-curve edge, so shaving 1bp of base barely dents per-fill edge while winning more orders. I keep the ramp steep and before the anchor (slope450, max80, window600) so it measures real-balance drain and prices out one-way informed flow after the first touch, and it keeps the three-pair triangle above the pools' discrepancy so the validator's loop stays unprofitable."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 2.189684,
+      "seUsd": 0.668106,
+      "fills": 26
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 30
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "53847797710783690670571456613210535173906678120469052933393421998245647056196"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I have won all four closed generations with this ungated toxicityFee>anchor>xyc shape, and my gen-3 config (base 6, slope 350, max 75, depth 100) posted the field-best attested 2.14 while every rival who ran a steeper slope or deeper anchor (flat 450/130 -> 0.05, wide 450/120 -> 0.90, tight 400/110 -> 1.41) scored worse. The lesson is consistent: in this regime the dominant cost is informed flow picking off the first hit each direction, and that cost scales with anchor depth, so the lowest-depth, moderate-slope program wins. This generation the tape is extreme (realized ~348 bps, ~15 moves/min), so the reference goes stale fast and a stale anchor is exactly what arbitrageurs harvest. My only change from the winning gen-3 program is tightening maxStaleness 45->30 to re-centre on the pool more often and cut arb bleed on the fast tape; I keep base 6 to sit under the ~12 bps mean tolerance and reclaim near-flat benign fills, slope 350/max 75 to ramp a capped 20% fill ~70 bps and price out one-way informed drains, depth 100 to keep informed exposure below the crowd's 110-130, and 6 bps stays above the cross-pair pool discrepancy so the USDC->WETH->cbBTC loop never pays and the validator passes."
+    },
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.804504,
+      "seUsd": 1.066362,
+      "fills": 26
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 400,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 100,
+        "maxStaleness": 30
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "22920385952554405138230200644897532270429667465802918865279568855594682317110"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +400 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 100x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "My 'flat' desk has lost every attested generation, and my last entry (base6/slope450/max85/depth130) scored 0.05 with a 1.86 SE: I both over-exposed (depth 130 bleeds to arbitrage when the reference is wrong) and over-defended, the worst combo. The record is unambiguous: the attested champion is always steady's non-gated toxicityFee>anchor>xyc at base6, moderate slope, depth 100, staleness 30. Aquascan confirms the leading live desks cluster at ~20 bps markout with base~6 toxicity, and the field this generation (tight, wide, steady) has all converged on base 5-6 / depth 100-120. So I stop fighting the proven core and adopt it: base 6 keeps me inside the ~12 bps mean-tolerance benign flow while depth 100 caps my exposure to a wrong reference (dropping from my old 130 is the main fix). My one deliberate edge for THIS round is defense tuned to the regime: realized vol is 334 bps with ~15 moves/min, so informed 5-min moves are frequent and costly; I set slope 400 / max 80 (steeper than steady's 350/75, gentler than wide's 450) so the toxicity fee, measured on the real balance before the anchor, ramps hard enough to price out one-way informed drains without taxing benign two-way flow. Same one-inventory three-pair desk with the anchor keeping the loop coherent so the validator passes."
+    }
+   ]
+  },
+  {
+   "generation": 5,
+   "closed": true,
+   "champion": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+   "field": [
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 1.10151,
+      "seUsd": 0.731839,
+      "fills": 22
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 130,
+        "maxStaleness": 20
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "80588544673037103715741999890103806274754779176269058071193483078156029637011"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 130x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I won gen4 with base6/slope350/max75/depth120/staleness30, and the field has converged on exactly that ramp; steady wrote first this round and copied my line, only freshening staleness to 25. The deciding lever remains depth: gen4 showed the jump from steady's depth100 (2.19) to my depth120 (2.62) pulled the bigger benign fills my way, and because the toxicityFee sits BEFORE the anchor it keys its ramp to my real-balance drain, so going deeper tightens benign capture without weakening the informed-flow defense at all. I nudge to depth130 (one notch past steady's 120) and set maxStaleness20 for the freshest possible re-centering on this choppy ~310bps-vol, 15-moves/min tape (prints arrive ~every 4s, so 20s is always fresh and keeps the three prices coherent for the triangular fork validator). Same proven base6 to never shed benign flow at rest and to clear the ~5bps triangular discrepancy, slope350/max75 for the moderate ramp that prices out informed continuation."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.701039,
+      "seUsd": 0.435323,
+      "fills": 20
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 25
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "20322898017613914600954710983241782729286479375911318297181498746629360252396"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I lost gen 4 to tight, whose only difference from my program was anchor depth 120 vs my 100 at the same base 6 / slope 350 / max 75; tight scored 2.62 attested, I scored 2.19, and both flat and wide who pushed slope to 400-450 scored worse (0.80, 1.19). The consistent lesson stands: base 6 sits under the ~12 bps mean tolerance to reclaim benign fills, moderate slope 350/max 75 prices out one-way informed drains without over-widening, and 6 bps keeps the cross-pair loop unprofitable so the validator passes. I adopt the gen-4 winning depth 120 (deeper anchor gave tighter quotes and more benign volume than my 100), and I tighten maxStaleness 30->25 because the tape is extreme (realized ~311 bps, ~15 moves/min) and a fresher re-centre cuts the arbitrage bleed that dominates on a fast tape. Same proven toxicityFee>anchor>xyc shape that has led the desk leaderboard all five fields."
+    },
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.083705,
+      "seUsd": 0.376153,
+      "fills": 20
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 20
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "42175108507663014497538449620882815418834454807255093266181693437768365952338"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "My flat desk has lost every attested generation by out-clevering the field: gating, then over-defending (slope 400-450) and over-exposing (depth 130), the worst combos. Aquascan and the attested record agree the winners are the non-gated toxicityFee>anchor>xyc desks (steady 0x7099 at 21.2 bps 5m markout, tight 0x90f7 at 18.7), and gen4's champion was tight at exactly base6/slope350/max75/depth120/staleness30, which beat the depth-100 steady clone (2.62 vs 2.19), so depth 120 is the proven exposure sweet spot and base 6 captures the ~12 bps benign flow without taxing it. I stop deviating on fee shape and adopt that exact core. My single deliberate edge is staleness: with realized vol ~310 bps and ~15 moves/min, a stale anchor bleeds to arbitrage, so I drop maxStaleness from 30 to 20 (the whole field this round is moving that way, 15-25) to keep the depth-120 curve freshly recentred and cut arb losses while the slope-350/max-75 toxicity fee still prices out one-way informed drains. Same one-inventory three-pair desk with the anchor keeping the loop coherent so the validator passes."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.34093,
+      "seUsd": 0.544012,
+      "fills": 27
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 75,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 125,
+        "maxStaleness": 15
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "5691238785411809328659373477525355472419372118501891622700785440861151834659"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 75 bps, window 600 s",
+      "@ 28  OracleAnchor depth 125x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The record and the desk board both say the same thing: the no-gate toxicity-ramp AMM at base6/slope350/max75 with an anchor near depth100-130 is what scores (champion desk 21.35 bps/fill), and my gen4 loss came not from the fee but from over-steep slope450 and stale anchors bleeding to informed flow. So I stop fighting the recipe and mutate the champion tight: I keep its proven base6/slope350/max75 ramp (before the anchor, so it measures real-balance drain and prices out one-way informed flow after the first touch, and keeps the three-pair triangle above the pools' discrepancy for the validator loop). My single edge, since I write last, is the anchor: I push staleness to 15s, fresher than tight's 20 and steady's 25, because in this 310bps-realized tape the negative 1h markout is arbitrage bleed on stale quotes, and re-centering more often directly cuts that loss. I set depth125, competitive enough to win the shared benign flow without tight's depth130 over-exposure that runs deep books over when the reference lags."
+    }
+   ]
+  },
+  {
+   "generation": 6,
+   "closed": true,
+   "champion": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+   "field": [
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 1.830825,
+      "seUsd": 0.68123,
+      "fills": 30
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 140,
+        "maxStaleness": 18
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "72509226656516668344847769475970751856231211316230542612292975300583122433014"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 140x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I won gen4 and gen5 on the toxicityFee>anchor>xyc line, and the whole field (Aquascan shows 6bps toxicity is now half the venue's volume) has converged on my base6/slope350 ramp. The decisive point: because the toxicityFee sits BEFORE the anchor, its ramp keys to my real-balance drain, so informed-flow defense is completely independent of depth. That makes depth a nearly-free benign-capture lever, bounded only by the intra-staleness gap risk on this choppy 310bps-vol, 16-moves/min tape. So I keep the proven base6 (never sheds benign at rest, beats the pool, and clears the ~5bps triangular discrepancy for the loop-arb fork), slope350/max80 for the moderate ramp that prices out informed continuation, hold staleness at 18s to bound the gap exposure a deep curve carries, and push depth to 140, one notch past steady's 135 opener, to pull the larger benign fills my way with tighter slippage while the informed defense stays fully intact. This directly mutates steady's gen6 line, the freshest copy of my own winning template."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.393775,
+      "seUsd": 0.441245,
+      "fills": 28
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 1500,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 140,
+        "maxStaleness": 12
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "112285177335374591256190970348542086392376062174057688165814061355687310280943"
+     },
+     "listing": [
+      "@  0  RiskCap 15% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 140x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The desk board is unambiguous: the winning frontier is the no-gate base6/slope350/max80 toxicity ramp before a fresh oracle anchor, and the champions (steady 21.4 bps/fill, tight 22.9) beat me not on edge-per-fill but on fill count (185-194 vs my 139) because their deeper, tighter books capture more of the shared benign flow, while their 1h markout stays positive (+1 to +5 bps) meaning their ramp actually keeps informed flow off. My problem across gens has been negative 1h drift: I get run over. So I mutate tight's gen6 (depth140/stale18/max80) with two changes. First, I push anchor freshness to maxStaleness 12, fresher than tight's 18 and steady's 18; in this 310-bps-realized, 16-moves/minute tape the arbitrage bleed on stale quotes is my main leak, and re-centering more often cuts it directly with no downside since the pool reprices every few seconds. Second, and my real lever nobody has touched: I tighten capBps from 2000 to 1500. The first informed hit on a deep book at only base6 is what bleeds me; capping any single fill at 15% instead of 20% shrinks that worst-case adverse fill by a quarter and forces the informed taker to re-touch into an already-ramped fee, while leaving the typical small benign order untouched. I keep depth 140 to stay competitive for benign fills, since the low cap already bounds my informed exposure. Deep because fresh, and capped because I keep getting run over."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.685073,
+      "seUsd": 0.73018,
+      "fills": 38
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 350,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 135,
+        "maxStaleness": 18
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "6861101880563933444982909606355215341325541784032037129698652061845427821736"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +350 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 135x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I mutate the gen-5 champion (tight: base6/slope350/max75, depth130, staleness20), which beat my depth-120 program 1.10 to 0.70 and whose live desk still shows a healthy +20 bps 5m markout, so deeper anchor is not being run over. The whole field has converged on base6/slope350 and the winning trend across gens has been ever-deeper anchoring (100->120->130), because on a benign-flow race where everyone charges 6 bps the deepest curve quotes tightest and wins the order under the ~12 bps mean tolerance. I push depth 130->135 to take a touch more benign volume, and on this fast, high-vol tape (~310 bps realized, a move every ~4s) I tighten staleness 20->18 to re-centre fresher and cut arbitrage bleed. I raise the toxicity cap 75->80 (keeping base 6 and slope 350 untouched) so one-way informed runs get priced out slightly harder on later fills at no cost to benign quotes. Base stays 6 to keep the three-pair loop unprofitable so the validator passes; shape stays the proven toxicityFee>anchor>xyc with the fee measured on the real balance for a stronger drain signal."
+    }
+   ]
+  },
+  {
+   "generation": 7,
+   "closed": true,
+   "champion": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+   "field": [
+    {
+     "name": "flat",
+     "address": "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.430602,
+      "seUsd": 0.723861,
+      "fills": 27
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 375,
+        "maxBps": 80,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 120,
+        "maxStaleness": 18
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "10065169318863650699212667618651452196440565322439391910266924381888059978278"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +375 bps per full drain, max 80 bps, window 600 s",
+      "@ 28  OracleAnchor depth 120x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "My flat desk keeps leading on fills and volume yet losing on attested markout: I am always the tightest desk, so I catch the marginal, toxic, informed flow that others price out, and being run over costs more than the fee earns. Reading the attested record rather than the live figures, the highest scores ever (gen4 tight 2.62 and steady 2.19, gen3 steady 2.14) came from MODERATE depth (100-120) with moderate staleness; the field's recent drift to deep, fresh anchors (145-150) coincided with lower attested all round, because a deeper anchor means more exposure when the reference is wrong. So my deliberate edge this generation is depth discipline: while wide/steady/tight all shipped depth 145-150, I hold depth 120 (the proven gen4-champion exposure sweet spot), which makes me the LESS attractive desk for large/informed extraction and shifts my fill mix toward benign flow, improving markout per fill instead of chasing volume. I keep base 6 to capture the ~12 bps benign flow untaxed, nudge slope to 375 and max to 80 so a one-way informed drain ramps past the move faster, and keep staleness at 18 (fresh enough given ~18 moves/min) with the fee before the anchor so toxicity is measured on real balance. Anchor across all three pairs keeps the USDC-WETH-cbBTC loop coherent so the validator passes."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 1.232614,
+      "seUsd": 0.634417,
+      "fills": 30
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 400,
+        "maxBps": 85,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 150,
+        "maxStaleness": 10
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "67378906210653343069510452568029135338696760061328569641492535567163543906969"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +400 bps per full drain, max 85 bps, window 600 s",
+      "@ 28  OracleAnchor depth 150x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "The scored quantity is the 5-minute markout, and Aquascan confirms the story: my desk's 5m markout is strongly positive (+22 USD across strategies) even though 1h drift is slightly negative, so chasing 1h drift with a tight cap was the wrong lever - my gen6 capBps 1500 experiment produced my worst attested score (0.39) by starving me of benign fills. So I revert to capBps 2000. The two things that actually move the 5m score are capturing benign flow (deep, tight book) and refusing informed/arb flow (a fee that ramps past a coming move, and a fresh anchor so arbitrageurs can't pick off a stale quote - a stale-quote arb marks negative at 5 minutes). The tape is calm now (8 bps realized vol), so 5+ bps informed moves are rarer and depth is comparatively safe: I match the deepest book in the field at depth 150 to win benign fills. My clean, uncontested edge is anchor freshness - I set maxStaleness 10, fresher than tight's and steady's 15, which cuts arb bleed directly with no downside in a tape that reprices every few seconds. I pair the deep book with a stronger ramp than tight (slope 400, max 85 vs 375/82) so the deep book is defended: after the first informed touch the fee widens fast enough to price the rest of the one-way flow out inside the 5-minute window. Deepest and freshest, defended by a steeper ramp."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": true,
+     "attested": {
+      "scoreUsd": 2.590878,
+      "seUsd": 0.961097,
+      "fills": 28
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 400,
+        "maxBps": 85,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 150,
+        "maxStaleness": 15
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "23508785295074372094875662239726268806399986870450581534872292173991266767278"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +400 bps per full drain, max 85 bps, window 600 s",
+      "@ 28  OracleAnchor depth 150x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I mutate the gen-6 champion (tight: base6/slope350/max80, depth140, staleness18), which beat my depth-135 program 1.83 to 1.685. My own desk still leads the accumulated leaderboard at ~21 bps 5m markout with the largest fill count, so deeper anchoring keeps winning the benign-flow race under the ~12 bps mean tolerance without being run over. On a benign race where everyone charges 6 bps base, the deepest, freshest curve quotes tightest and wins the order, and every generation the winner has gone deeper (100->120->130->140). I push depth 140->150 to take more benign volume. To offset the extra exposure a deeper curve carries when the reference is wrong, I raise the toxicity slope 350->400 and cap 80->85 (fee measured on the real balance, before the anchor, for the strongest drain signal) so one-way informed runs ramp out of the money faster. On this fast, high-vol tape (a move every ~4s) I tighten staleness 18->15 to re-centre fresher and cut arbitrage bleed. Base stays 6 to keep the three-pair loop unprofitable so the validator passes; proven shape toxicityFee>anchor>xyc, cap stays 2000 since gen-6 showed cap 1500 tanked volume and score."
+    },
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": {
+      "scoreUsd": 0.882463,
+      "seUsd": 0.533428,
+      "fills": 30
+     },
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 375,
+        "maxBps": 82,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 145,
+        "maxStaleness": 15
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "93890844270457054335172039569153925898588779304115431410008914917930951961236"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +375 bps per full drain, max 82 bps, window 600 s",
+      "@ 28  OracleAnchor depth 145x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Resubmission of my proven toxicityFee>anchor>xyc line, now correctly terminated with xyc (the prior submit was rejected for lacking the swap as its final instruction). Aquascan confirms this anchored-toxicity template dominates: my desk and steady's both run ~21bps 5m markout, while the only divergent experiment, flat's gated flat-fee desk, bled to a negative 1h markout and negative pnl, so I stay on the winning template. The fee sits before the anchor, keying its ramp to real-balance drain, so informed defense is depth-independent; I nudge slope 350->375 and max 80->82 for marginally faster price-out of informed continuation (matching steady's gen7 escalation to 400/85 without over-shedding benign), keep base6 as the benign floor that beats the pool and clears the triangular loop discrepancy, and push depth one notch to 145 to pull larger benign fills with tighter slippage. Given the fast 17-moves/min, 8bps-vol tape I hold staleness at 15s: fresh enough that the anchor always fires (pool prints every ~3.5s) yet tight enough to bound the gap exposure the deeper curve carries."
+    }
+   ]
+  },
+  {
+   "generation": 8,
+   "closed": false,
+   "champion": null,
+   "field": [
+    {
+     "name": "tight",
+     "address": "0x90f79bf6eb2c4f870365e785982e1f101e93b906",
+     "champion": false,
+     "attested": null,
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 450,
+        "maxBps": 90,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 160,
+        "maxStaleness": 15
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "100329419758675646312387983735067466660910827599149974381644545046210988921976"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +450 bps per full drain, max 90 bps, window 600 s",
+      "@ 28  OracleAnchor depth 160x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Aquascan confirms the settled meta: the non-gated oracle-anchored-toxicity template leads (steady and my desk both ~21bps cumulative 5m markout, positive 1h), while every gated/flat variant bleeds (flat's gated desks show negative 1h markout and near-zero attested). So I stay on toxicityFee>anchor>xyc, base 6 (beats the pool's 5bps fee, clears the triangular loop, and is the field's dominant tier). I mutate steady's just-shipped gen8 line (depth160/425/88). Since the taker routes to the single best quote, depth wins the large benign fills head-to-head, so I match steady at depth 160 rather than let it out-tighten me, keeping staleness 15 (the anchor fires every ~3.5s print, tested better than 10-12 in gens 5-7). The toxicity ramp costs benign flow almost nothing (it only widens under one-way drain) yet is my whole informed defense, so with a curve this deep I push slope 425->450 and max 88->90 to price out informed continuation at least as fast as steady, offsetting the extra gap exposure the deeper curve carries. Given the calm tape (8.3bps realized vol, price prints every ~3.5s) informed damage is modest, so leaning into benign capture with matched depth and a marginally stronger ramp is the robust edge."
+    },
+    {
+     "name": "steady",
+     "address": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+     "champion": false,
+     "attested": null,
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 425,
+        "maxBps": 88,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 160,
+        "maxStaleness": 15
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "34744154071010700889804874641138947038570468488387774437503716077295861600182"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +425 bps per full drain, max 88 bps, window 600 s",
+      "@ 28  OracleAnchor depth 160x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "I defend and extend my gen-7 champion (base6/slope400/max85, depth150, staleness15), which took the highest attested score (2.59) and whose desk still leads the accumulated leaderboard (21.3 bps 5m markout, 245 fills, largest edge). The benign-flow race under the ~12 bps mean tolerance is won by the tightest effective quote, so the deepest, freshest curve keeps winning head-to-head; every generation the winner went deeper, and gen-7 split at depth 150 (I won at staleness 15, wide lost at staleness 10 because a too-strict staleness occasionally skips the anchor and bleeds to arbs). So I keep staleness 15 and push depth 150->160 to stay ahead of rivals who will crowd to 150+. To pay for the extra exposure a deeper curve carries when the reference is wrong, I stiffen the toxicity ramp (slope 400->425, max 85->88), measured on the real balance before the anchor for the strongest drain signal, so a single ~20% informed drain ramps straight to the cap and prices out the rest of a one-way run. Base stays 6 to keep quoting tight on benign flow and to keep the three-pair loop unprofitable for the validator; cap stays 2000 since gen-6 showed 1500 tanked volume and score. Proven shape toxicityFee>anchor>xyc."
+    },
+    {
+     "name": "wide",
+     "address": "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65",
+     "champion": false,
+     "attested": null,
+     "spec": {
+      "pairs": [
+       "WETH/USDC",
+       "cbBTC/USDC",
+       "cbBTC/WETH"
+      ],
+      "capBps": 2000,
+      "ops": [
+       {
+        "op": "toxicityFee",
+        "baseBps": 6,
+        "slopeBps": 450,
+        "maxBps": 88,
+        "windowSeconds": 600
+       },
+       {
+        "op": "anchor",
+        "depth": 165,
+        "maxStaleness": 10
+       },
+       {
+        "op": "xyc"
+       }
+      ],
+      "salt": "10585152629741932560703000293426582563643419984242055072798111575488274650515"
+     },
+     "listing": [
+      "@  0  RiskCap 20% of either balance per fill",
+      "@ 10  ToxicityFee 6 bps at rest, +450 bps per full drain, max 88 bps, window 600 s",
+      "@ 28  OracleAnchor depth 165x on WETH/USDC, cbBTC/USDC, cbBTC/WETH",
+      "@225  XYCSwap",
+      "@227  Salt"
+     ],
+     "rationale": "Aquascan confirms the scored quantity, 5m markout, is dominated by benign fee capture: the field runs +20 bps at 5m even while 1h drift is deeply negative, so the winning lever is winning more benign quotes with a fresh, deep book while the ramp refuses the one-way flow before it compounds. I mutate the gen8 frontier (tight, depth 160) and edge it on the one axis with no downside in a tape that reprices every ~3.5s (17 moves/min): maxStaleness 10, fresher than both rivals' 15, which centres my virtual curve on the true pool price and denies static-arb any stale quote to pick off. I match-and-exceed depth at 165 to win the best-quote contest for benign flow in this calm 8 bps tape, and defend that deep book with a responsive ramp (slope 450, cap 88): with a 20% risk cap, a single one-way fill drains up to 20% of real balance and adds ~90 bps of fee, so the second informed touch is already priced out inside the window. I trim max to 88 from tight's 90 so the fee relaxes a touch faster on reversion and keeps capturing benign two-sided flow. Base stays 6, the proven floor against the 12 bps mean tolerance."
+    }
+   ]
+  }
+ ]
+}

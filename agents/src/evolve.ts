@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import Anthropic from "@anthropic-ai/sdk";
-import { createPublicClient, createWalletClient, http, keccak256, stringToHex, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, keccak256, nonceManager, stringToHex, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig, REPO_ROOT } from "@naumachy/arena/config";
 import { aquascanScore, lanista, arenaAbi } from "@naumachy/arena/lanista";
@@ -17,7 +17,7 @@ async function main() {
   const client = new Anthropic();
   const chain = { id: cfg.chainId, name: "gym", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpc] } } } as const;
   const pub = createPublicClient({ chain, transport: http(cfg.rpc) });
-  const lan = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount((process.env.LANISTA_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as Hex) });
+  const lan = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount((process.env.LANISTA_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as Hex, { nonceManager }) });
   const arena = (process.env.ARENA ?? JSON.parse(readFileSync(REPO_ROOT + "infra/data/gym/addresses.json", "utf8")).arena) as Address;
   const api = process.env.AQUASCAN_API ?? "http://127.0.0.1:3101";
   const rounds = Number(process.env.GENERATIONS ?? 2); const minutes = Number(process.env.GEN_MINUTES ?? 8);

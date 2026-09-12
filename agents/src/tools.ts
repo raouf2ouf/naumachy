@@ -21,7 +21,7 @@ export interface GraphSetup {
 export function graphSetup(cfg: Config, env: NodeJS.ProcessEnv = process.env): GraphSetup {
   const ids: Partial<Record<SubgraphName, string>> = { arena: env.ARENA_SUBGRAPH_ID, pools: env.POOLS_SUBGRAPH_ID ?? env.DEX_SUBGRAPH_ID_BASE, aqua: env.AQUA_SUBGRAPH_ID };
   const gateway = (id: string) => `https://gateway.thegraph.com/api/subgraphs/id/${id}`;
-  const local = (name: string) => cfg.gymSubgraph.replace("aqua-gym", `${name}-gym`);
+  const local = (name: string) => (name === "arena" ? cfg.arenaSubgraph : cfg.poolsSubgraph);
   const mode = env.GLADIATOR_GRAPH === "mcp" ? "mcp" : "local";
   const urls = { arena: mode === "mcp" && ids.arena ? gateway(ids.arena) : local("arena"), pools: mode === "mcp" && ids.pools ? gateway(ids.pools) : local("pools"), aqua: mode === "mcp" && ids.aqua ? gateway(ids.aqua) : cfg.gymSubgraph };
   return { mode, urls, ids, gatewayKey: env.GRAPH_API_KEY };

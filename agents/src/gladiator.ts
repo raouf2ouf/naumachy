@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import Anthropic from "@anthropic-ai/sdk";
-import { createPublicClient, createWalletClient, formatUnits, http, keccak256, stringToHex, toHex, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, formatUnits, http, keccak256, nonceManager, stringToHex, toHex, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig, ledgerFor, REPO_ROOT, type Config } from "@naumachy/arena/config";
 import { compile, summarize, ARCHETYPE_AUTHORED, type Compiled, type Pair, type ProgramSpec } from "@naumachy/arena/program";
@@ -28,10 +28,10 @@ const gymChain = (cfg: Config, rpc = cfg.rpc) => ({ id: cfg.chainId, name: "gym"
 export async function runGladiator(cfg: Config, client: Anthropic, key: Hex, myName: string, api: string, arena: Address): Promise<GladiatorRun> {
   const chain = gymChain(cfg);
   const pub = createPublicClient({ chain, transport: http(cfg.rpc) });
-  const account = privateKeyToAccount(key);
+  const account = privateKeyToAccount(key, { nonceManager });   // the live wallet only: the private fork shares the chain id and must not share the nonce count
   const wallet = createWalletClient({ chain, transport: http(cfg.rpc), account });
   const generation = Number(await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" }).catch(() => { throw new Error("no generation is open; the lanista opens one first"); }));
-  const dir = `${REPO_ROOT}infra/data/gym/generations`; mkdirSync(dir, { recursive: true });
+  const dir = cfg.generationsDir; mkdirSync(dir, { recursive: true });
 
   const ctx = await gatherContext(cfg, api, account.address, myName);
   const graph = graphSetup(cfg);
@@ -128,10 +128,10 @@ export async function validateOnPrivateFork(cfg: Config, key: Hex, compiled: Com
         const r = await pub.waitForTransactionReceipt({ hash: h }); if (r.status !== "success") throw new Error("a leg of the loop reverted");
         return result[1];
       };
-      const usdcIn = 50_000_000n;
+      const usdcIn = BigInt(Math.round(cfg.loopUsdc * 1e6));
       const w = await swap(cfg.usdc, cfg.weth, usdcIn); const b = await swap(cfg.weth, cfg.cbbtc, w); const usdcOut = await swap(cfg.cbbtc, cfg.usdc, b);
       draft.loop = { usdcIn: Number(usdcIn) / 1e6, usdcOut: Number(usdcOut) / 1e6 };
-      if (usdcOut > usdcIn) throw new Error(`a round trip USDC -> WETH -> cbBTC -> USDC through your three quotes pays the taker ${(Number(usdcOut - usdcIn) / 1e6).toFixed(3)} USDC per 50: your three prices disagree; anchor every pair and keep a fee above the pools' discrepancy`);
+      if (usdcOut > usdcIn) throw new Error(`a round trip USDC -> WETH -> cbBTC -> USDC through your three quotes pays the taker ${(Number(usdcOut - usdcIn) / 1e6).toFixed(3)} USDC per ${cfg.loopUsdc}: your three prices disagree; anchor every pair and keep a fee above the pools' discrepancy`);
     }
     return draft;
   } finally {

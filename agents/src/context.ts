@@ -10,7 +10,19 @@ import { disassemble, type ProgramSpec } from "@naumachy/arena/program";
 // Aquascan numbers beside it are live and keep moving while a program stays shipped.
 export interface Verdict { gladiator: string; name: string; strategyHash: Hex; spec: ProgramSpec | null; listing: string[] | null; summary: Record<string, unknown> | null; attested: { scoreUsd: number; seUsd: number; fills: number } | null; liveNote: string; scoreUsd: number | null; bps: number | null; seBps: number | null; fills: number | null; volume: number | null; feeBps: number | null }
 export interface GenerationView { number: number; closed: boolean; champion: string | null; verdicts: Verdict[] }
-export interface Context { generations: GenerationView[]; pool: { priceNow: number; movesPerMinute: number; realizedVolBps: number; prints: number }; me: { address: Address; name: string; lastSpec: ProgramSpec | null; lastListing: string[] | null; lastRationale: string | null; lastGeneration: number | null } }
+export interface Context { generations: GenerationView[]; pool: { priceNow: number; movesPerMinute: number; realizedVolBps: number; prints: number }; me: { address: Address; name: string; lastSpec: ProgramSpec | null; lastListing: string[] | null; lastRationale: string | null; lastGeneration: number | null }; gym?: GymRecord }
+
+// The record of the training seasons, present when the arena is live: what each line shipped on
+// the fork, generation by generation, and what it attested. GYM_RECORD names the file.
+export interface GymRecord { note: string; generations: { generation: number; champion: string | null; field: { name: string; champion: boolean; attested: { scoreUsd: number; seUsd: number; fills: number } | null; spec: ProgramSpec | null }[] }[] }
+export function gymRecord(env: NodeJS.ProcessEnv = process.env): GymRecord | undefined {
+  const f = env.GYM_RECORD; if (!f || !existsSync(f)) return undefined;
+  const r = JSON.parse(readFileSync(f, "utf8")) as { source: string; generations: { generation: number; closed: boolean; champion: string | null; field: { name: string; champion: boolean; attested: { scoreUsd: number; seUsd: number; fills: number } | null; spec: ProgramSpec | null }[] }[] };
+  return {
+    note: `Training seasons (${r.source}). Attested 5-minute markout sums in USDC per generation; ledgers there were about a hundred times larger than the live ones, and the flow carried a foresight taker the live arena does not have.`,
+    generations: r.generations.filter((g) => g.closed).map((g) => ({ generation: g.generation, champion: g.champion, field: g.field.map((x) => ({ name: x.name, champion: x.champion, attested: x.attested, spec: x.spec ? { pairs: x.spec.pairs, capBps: x.spec.capBps, ops: x.spec.ops } : null })) })),
+  };
+}
 
 export interface GenFile { spec?: ProgramSpec; listing?: string[]; program?: Hex; knobs: Record<string, unknown> & { rationale?: string; parent?: string | null } }
 
@@ -18,7 +30,7 @@ export interface GenFile { spec?: ProgramSpec; listing?: string[]; program?: Hex
 // not. The generation files hold both; the context shows programs to everyone and the rationale
 // only to the gladiator that wrote it.
 export function generationFile(generation: number, address: string): GenFile | null {
-  const f = `${REPO_ROOT}infra/data/gym/generations/${generation}-${address.toLowerCase()}.json`;
+  const f = `${process.env.GENERATIONS_DIR ?? `${REPO_ROOT}infra/data/gym/generations`}/${generation}-${address.toLowerCase()}.json`;
   if (!existsSync(f)) return null;
   return JSON.parse(readFileSync(f, "utf8")) as GenFile;
 }
@@ -34,7 +46,7 @@ async function gql<T>(url: string, query: string): Promise<T> {
 const name = (hex: string) => Buffer.from(hex.slice(2), "hex").toString("utf8").replace(/\0+$/, "");
 
 export async function gatherContext(cfg: Config, api: string, me: Address, myName: string): Promise<Context> {
-  const arena = cfg.gymSubgraph.replace("aqua-gym", "arena-gym"); const pools = cfg.gymSubgraph.replace("aqua-gym", "pools-gym");
+  const arena = cfg.arenaSubgraph; const pools = cfg.poolsSubgraph;
   const g = await gql<{ generations: { number: number; closedAt: string | null; champion: { id: string } | null; entries: { gladiator: { id: string; name: string }; strategyHash: Hex; score: { scoreQuote: string; seQuote: string; fills: number } | null }[] }[] }>(
     arena, `{ generations(orderBy: number, orderDirection: asc) { number closedAt champion { id } entries { gladiator { id name } strategyHash score { scoreQuote seQuote fills } } } }`);
   // the program bytes of every live or past entry, so a listing exists even without a generation file
@@ -79,5 +91,6 @@ export async function gatherContext(cfg: Config, api: string, me: Address, myNam
     generations,
     pool: { priceNow: prices.length ? prices[prices.length - 1].px : 0, movesPerMinute: prices.length / (span / 60), realizedVolBps: vol, prints: prices.length },
     me: { address: me, name: myName, lastSpec: publicSpec(mine), lastListing: mine?.listing ?? myVerdict?.listing ?? null, lastRationale: mine?.knobs?.rationale ?? null, lastGeneration: myLastGen?.number ?? null },
+    gym: gymRecord(),
   };
 }
