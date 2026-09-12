@@ -25,8 +25,8 @@ export function Shell() {
     <div className="shell">
       <aside className="rail">
         <NavLink to="/" className="brand" aria-label="Aquascan, overview">
-          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--color-bronze)" /><path d="M5 20c3-4 6-4 9 0s6 4 9 0 3-4 4-3" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /></svg>
-          <span><span className="brand-name">Aquascan</span><span className="brand-tag">every Aqua strategy, re-priced</span></span>
+          <img className="brand-mark" src="/logos/naumachy.png" alt="" width="52" height="32" />
+          <span className="brand-name">Aquascan</span><span className="brand-tag">every Aqua strategy, re-priced</span>
         </NavLink>
         <div>
           {groups.map((g) => (
