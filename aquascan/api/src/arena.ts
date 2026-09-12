@@ -1,5 +1,6 @@
 import type pg from "pg";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { scored, rollupAt } from "./queries.js";
 
 type Pool = pg.Pool;
@@ -26,7 +27,7 @@ const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 interface GenFile { knobs: Record<string, unknown> & { rationale?: string; parent?: string | null }; mind?: string; transcript?: unknown[]; draft?: unknown; program?: string; blob?: string; strategyHash?: string; listing?: string[]; pairs?: string[]; rejected?: string[] }
 function genFile(generation: number, address: string): GenFile | null {
-  const f = `${DIR}${generation}-${address.toLowerCase()}.json`;
+  const f = join(DIR, `${generation}-${address.toLowerCase()}.json`);   // DIR with or without a trailing slash
   if (!existsSync(f)) return null;
   try { return JSON.parse(readFileSync(f, "utf8")) as GenFile; } catch { return null; }
 }
