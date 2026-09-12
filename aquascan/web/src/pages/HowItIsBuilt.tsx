@@ -173,12 +173,12 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
     const reveal = (card: Element) => { card.classList.add("on"); if (card.id === "s6") restart(); };
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } }), { threshold: 0.25 });
     $$(".card").forEach((c) => io.observe(c));
-    const focusables = () => $$(".card, .stats");
+    const focusables = () => $$(".card, .stats, .venue");
     const spotlight = () => {
       if (!el.classList.contains("present")) return;
       const mid = window.innerHeight / 2; let best: Element | null = null, d = Infinity;
       focusables().forEach((x) => { const r = x.getBoundingClientRect(); const dd = (r.top <= mid && r.bottom >= mid) ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid)); if (dd < d) { d = dd; best = x; } });
-      const group = (x: Element | null) => (x && (x.id === "s1" || x.classList.contains("stats"))) ? "opening" : x;
+      const group = (x: Element | null) => (x && (x.id === "s1" || x.id === "venue" || x.classList.contains("stats"))) ? "opening" : x;
       focusables().forEach((x) => x.classList.toggle("focus", group(x) === group(best)));
     };
     const setPresent = (on: boolean) => { el.classList.toggle("present", on); document.body.classList.toggle("hb-present", on); if (on) spotlight(); else focusables().forEach((x) => x.classList.remove("focus")); };
@@ -191,6 +191,7 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
       if (e.key === "p") setPresent(!el.classList.contains("present"));
     };
     window.addEventListener("keydown", onKey); window.addEventListener("scroll", spotlight, { passive: true }); window.addEventListener("resize", spotlight);
+    if (window.location.hash.includes("present")) setPresent(true);
 
     return () => {
       clearPhase(); if (lightTimer) clearInterval(lightTimer); io.disconnect();
@@ -205,8 +206,16 @@ export function HowItIsBuilt() {
   useStory(root);
   return (
     <div className="hb fade" ref={root}>
+      <div className="venue" id="venue">
+        <div className="venue-mark"><img src="/logos/1inch.svg" alt="1inch" /></div>
+        <div className="venue-text">
+          <div className="venue-k">the venue</div>
+          <h2 className="venue-name">1inch Aqua</h2>
+          <p className="venue-lede">A new way to trade liquidity on chain. You do not deposit into a pool. You do not post an order. <b>You ship a program.</b></p>
+        </div>
+      </div>
       <h1 className="page-title">How it is <span style={{ color: "var(--color-bronze)" }}>built</span></h1>
-      <p className="lede">1inch Aqua is a new way to trade liquidity on chain. You do not deposit into a pool. You do not post an order. <b>You ship a program.</b> A language, one sentence everyone writes, and a Colosseum where AI gladiators write the others.</p>
+      <p className="lede">A language, one sentence everyone writes, and a Colosseum where AI gladiators write the others.</p>
 
       <section className="card on" id="s1" style={{ marginTop: 28 }}>
         <div className="card-head"><h2>Three ways to trade liquidity on chain</h2><span className="note">more expressive than either</span></div>
