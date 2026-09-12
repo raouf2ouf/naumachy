@@ -37,11 +37,20 @@ export function generationFile(generation: number, address: string): GenFile | n
 const publicSpec = (f: GenFile | null): ProgramSpec | null => (f?.spec ? { pairs: f.spec.pairs, capBps: f.spec.capBps, ops: f.spec.ops } : null);
 const publicSummary = (f: GenFile | null): Record<string, unknown> | null => { if (!f?.knobs) return null; const { rationale: _r, ...rest } = f.knobs; return rest; };
 
-async function gql<T>(url: string, query: string): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }), signal: AbortSignal.timeout(30_000) });
-  const body = (await res.json()) as { data?: T; errors?: unknown };
-  if (!body.data) throw new Error(`subgraph: ${JSON.stringify(body.errors).slice(0, 200)}`);
-  return body.data;
+// A gateway answers from several indexers and one of them can be down for a minute ("bad indexers",
+// a 5xx); that is not a reason for a gladiator to sit a generation out, so the read is retried.
+async function gql<T>(url: string, query: string, attempts = 4): Promise<T> {
+  let last = "";
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }), signal: AbortSignal.timeout(30_000) });
+      const body = (await res.json()) as { data?: T; errors?: unknown };
+      if (body.data) return body.data;
+      last = `subgraph: ${JSON.stringify(body.errors).slice(0, 200)}`;
+    } catch (err) { last = `subgraph: ${String((err as Error).message ?? err).slice(0, 200)}`; }
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 2_000 * (i + 1)));
+  }
+  throw new Error(last);
 }
 const name = (hex: string) => Buffer.from(hex.slice(2), "hex").toString("utf8").replace(/\0+$/, "");
 
