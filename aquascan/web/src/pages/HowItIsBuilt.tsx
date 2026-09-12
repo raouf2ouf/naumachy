@@ -251,7 +251,7 @@ export function HowItIsBuilt() {
       </section>
 
       <section className="card" id="s6">
-        <div className="card-head"><h2>The arena</h2></div>
+        <div className="card-head"><h2 className="with-mark"><img src="/logos/naumachy.png" alt="" className="hb-mark" />The arena</h2></div>
         <div className="card-body arena">
           <svg width="0" height="0" style={{ position: "absolute" }}><defs>
             <symbol id="bust" viewBox="0 0 80 90">
