@@ -178,7 +178,7 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
       if (!el.classList.contains("present")) return;
       const mid = window.innerHeight / 2; let best: Element | null = null, d = Infinity;
       focusables().forEach((x) => { const r = x.getBoundingClientRect(); const dd = (r.top <= mid && r.bottom >= mid) ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid)); if (dd < d) { d = dd; best = x; } });
-      const group = (x: Element | null) => (x && (x.id === "s1" || x.classList.contains("stats"))) ? "opening" : x;
+      const group = (x: Element | null) => (x && (x.id === "s2" || x.classList.contains("stats"))) ? "language" : x;   // the stat cards light with the dictionary
       focusables().forEach((x) => x.classList.toggle("focus", group(x) === group(best)));
     };
     const setPresent = (on: boolean) => { el.classList.toggle("present", on); document.body.classList.toggle("hb-present", on); if (on) spotlight(); else focusables().forEach((x) => x.classList.remove("focus")); };
