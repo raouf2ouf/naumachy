@@ -32,7 +32,7 @@ function EntryCard({ e, closed, generation, names }: { e: GenerationEntry; close
       </div>
       <div className="mt-3 grid md:grid-cols-[1fr_1fr] gap-x-8 gap-y-3">
         <div>
-          <table className="w-full">
+          {e.knobs && <table className="w-full">
             <thead><tr><th>Knob</th><th className="num">This program</th><th className="num">{parentName ? "Parent line" : ""}</th></tr></thead>
             <tbody>
               {KNOB_LABEL.map(([key, label, fmt]) => {
@@ -40,15 +40,16 @@ function EntryCard({ e, closed, generation, names }: { e: GenerationEntry; close
                 return <tr key={key}><td className="text-ink-muted">{label}</td><td className={`num ${changed ? "text-bronze" : ""}`}>{v === undefined ? "-" : fmt(v)}</td><td className="num text-ink-faint">{p === undefined ? "" : fmt(p)}</td></tr>;
               })}
             </tbody>
-          </table>
-          {parentName && <p className="text-xs text-ink-faint mt-1.5">Compared with {parentName}; changed knobs in bronze.</p>}
+          </table>}
+          {!e.knobs && !e.listing && <p className="text-[13px] text-ink-faint">This program's file is not on this Aquascan, so its knobs and listing cannot be shown; the attested score and the fills are on chain.</p>}
+          {e.knobs && parentName && <p className="text-xs text-ink-faint mt-1.5">Compared with {parentName}; changed knobs in blue.</p>}
           {e.listing && e.listing.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-ink-muted mb-1">The program, as compiled{e.pairs && e.pairs.length ? ` (${e.pairs.join(", ")})` : ""}</div>
               <pre className="text-[11px] mono leading-relaxed whitespace-pre overflow-x-auto bg-ink/5 rounded px-2 py-1.5">{e.listing.join("\n")}</pre>
             </div>
           )}
-          {draftPairs.length > 0 && <p className="text-xs text-ink-muted mt-2">Before shipping, on a private fork of the gym, this draft priced {draftPairs.map(([name, px]) => `${name} at ${px.sell.toFixed(2)} selling and ${px.buy.toFixed(2)} buying`).join("; ")}.{loop ? ` A 50 USDC loop through its three pairs came back as ${loop.usdcOut.toFixed(2)} USDC.` : ""}</p>}
+          {draftPairs.length > 0 && <p className="text-xs text-ink-muted mt-2">Before shipping, on a private fork, this draft priced {draftPairs.map(([name, px]) => `${name} at ${px.sell.toFixed(2)} selling and ${px.buy.toFixed(2)} buying`).join("; ")}.{loop ? ` A ${loop.usdcIn} USDC loop through its three pairs came back as ${loop.usdcOut.toFixed(2)} USDC.` : ""}</p>}
           {e.rejected && e.rejected.length > 0 && <p className="text-xs text-ink-faint mt-1">{e.rejected.length === 1 ? "One draft was refused first" : `${e.rejected.length} drafts were refused first`}: {e.rejected.map((r) => r.split(":")[0]).join("; ")}.</p>}
         </div>
         <div>
@@ -78,9 +79,9 @@ export function Generation() {
       <div className="text-xs text-ink-muted"><Link to="/arena" className="hover:text-ink">Arena</Link> / generation {n}</div>
       {q.isPending ? <Loading what="the generation" /> : q.isError ? <Failed what="the generation" error={q.error} /> : (
         <>
-          <h1 className="text-xl font-medium mt-1">Generation {q.data.number}</h1>
+          <h1 className="page-title mt-1">Generation {q.data.number}</h1>
           <p className="text-ink-muted text-[13px] mt-1">Opened {absTime(q.data.opened_at)}{q.data.closed_at !== null ? `, closed ${absTime(q.data.closed_at)}` : ", still open"} · tape <span className="mono">{shortAddr(q.data.tape, 8, 6)}</span>{q.data.champion && <> · champion <b className="text-ink font-medium">{q.data.champion.name ?? shortAddr(q.data.champion.address)}</b>{q.data.champion.score_usd !== null && ` with ${usd(q.data.champion.score_usd, true)}`}</>}</p>
-          <Section title="Programs" aside={`${q.data.entries.length} entered`}>
+          <Section plain title="Programs" aside={`${q.data.entries.length} entered`}>
             <div className="flex flex-col gap-4">{q.data.entries.map((e) => <EntryCard key={e.strategy_hash} e={e} closed={q.data.closed_at !== null} generation={q.data.number} names={Object.fromEntries(q.data.entries.filter((x) => x.name).map((x) => [x.gladiator.toLowerCase(), x.name as string]))} />)}</div>
           </Section>
           <Provenance at={q.data.rollup_at} extra="Knobs, rationales and reads come from the gladiators' own generation files; the attested score is what the lanista wrote on chain." />

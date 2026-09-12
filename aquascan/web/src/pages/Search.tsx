@@ -15,9 +15,33 @@ export function Search() {
   return (
     <div className="fade">
       <h1 className="page-title">Results for <span className="mono">{q}</span></h1>
-      {none && <p className="text-ink-muted mt-3">Nothing starts with that. Addresses are matched as lowercase prefixes.</p>}
-      {d.strategies.length > 0 && <div className="mt-6"><h2 className="text-[16px] font-semibold mb-2">Strategies</h2><div className="panel list">{d.strategies.map((x) => <Link key={x.chain + x.id} to={`/strategy/${x.chain}/${encodeURIComponent(x.id)}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.strategy_hash, 10, 6)}</span><ChainChip chain={x.chain} /><StatusDot status={x.status} /></Link>)}</div></div>}
-      {d.makers.length > 0 && <div className="mt-6"><h2 className="text-[16px] font-semibold mb-2">Makers</h2><div className="panel list">{d.makers.map((x) => <Link key={x.chain + x.maker} to={`/maker/${x.chain}/${x.maker}`} className="flex items-center gap-3 px-4 py-2.5"><span className="mono">{shortAddr(x.maker, 10, 6)}</span><ChainChip chain={x.chain} /><span className="text-ink-muted text-[13px]">{x.strategies} strategies, {x.live} live, {x.fills} fills</span></Link>)}</div></div>}
+      {none && <p className="page-desc">Nothing starts with that. Addresses are matched as lowercase prefixes.</p>}
+      {d.strategies.length > 0 && (
+        <div className="tile mt-6">
+          <div className="tile-head"><h2>Strategies</h2><span className="note">{d.strategies.length}</span></div>
+          <div className="tile-body">
+            {d.strategies.map((x) => (
+              <Link key={x.chain + x.id} to={`/strategy/${x.chain}/${encodeURIComponent(x.id)}`} className="row hover:text-bronze">
+                <span className="flex items-center gap-3"><span className="mono">{shortAddr(x.strategy_hash, 10, 6)}</span><ChainChip chain={x.chain} /><StatusDot status={x.status} /></span>
+                <span className="text-ink-muted text-[12.5px]">by <span className="mono">{shortAddr(x.maker)}</span></span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {d.makers.length > 0 && (
+        <div className="tile mt-6">
+          <div className="tile-head"><h2>Makers</h2><span className="note">{d.makers.length}</span></div>
+          <div className="tile-body">
+            {d.makers.map((x) => (
+              <Link key={x.chain + x.maker} to={`/maker/${x.chain}/${x.maker}`} className="row hover:text-bronze">
+                <span className="flex items-center gap-3"><span className="mono">{shortAddr(x.maker, 10, 6)}</span><ChainChip chain={x.chain} /></span>
+                <span className="text-ink-muted text-[12.5px]">{x.strategies} strategies</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

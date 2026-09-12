@@ -4,7 +4,7 @@ import { api, type ArenaEntry, type ArenaGeneration, type Knobs } from "../lib/a
 import { absTime, bandText, relTime, shortAddr, usd } from "../lib/format";
 import { Failed, Loading, Provenance, Section } from "../components/ui";
 
-export const MIND_LABEL: Record<string, string> = { heuristic: "control", seed: "seed", briefing: "mind", "tools-local": "mind, read the gym", "tools-mcp": "mind, read The Graph", unknown: "" };
+export const MIND_LABEL: Record<string, string> = { heuristic: "control", seed: "seed", briefing: "mind", "tools-local": "mind, read Aquascan", "tools-mcp": "mind, read The Graph", unknown: "" };
 
 export function MindChip({ mind }: { mind: string | null }) {
   if (!mind || !MIND_LABEL[mind]) return null;
@@ -34,6 +34,7 @@ export function LiveCell({ e }: { e: ArenaEntry }) {
 }
 
 function GenerationPanel({ g }: { g: ArenaGeneration }) {
+  const hasKnobs = g.entries.some((e) => e.knobs);   // the knob columns only when the generation files were read
   return (
     <div className="panel overflow-x-auto">
       <div className="flex items-baseline justify-between gap-4 flex-wrap px-4 pt-3 pb-2">
@@ -44,7 +45,7 @@ function GenerationPanel({ g }: { g: ArenaGeneration }) {
         <div className="text-xs text-ink-muted">{g.champion ? <>champion <b className="text-ink font-medium">{g.champion.name ?? shortAddr(g.champion.address)}</b>{g.champion.score_usd !== null && <> with {usd(g.champion.score_usd, true)} of 5-minute markout</>}</> : g.closed_at === null ? "the engine is trading them" : "closed without a champion"}</div>
       </div>
       <table>
-        <thead><tr><th>Gladiator</th><th>Mind</th><th className="num">Fee at rest</th><th className="num">Slope</th><th className="num">Ceiling</th><th className="num">Window</th><th className="num">Depth</th><th className="num">Cap</th><th className="num">Attested score</th><th className="num">Live, 5 min after fill</th></tr></thead>
+        <thead><tr><th>Gladiator</th><th>Mind</th>{hasKnobs && <><th className="num">Fee at rest</th><th className="num">Slope</th><th className="num">Ceiling</th><th className="num">Window</th><th className="num">Depth</th><th className="num">Cap</th></>}<th className="num">Attested score</th><th className="num">Live, 5 min after fill</th></tr></thead>
         <tbody>
           {g.entries.map((e) => (
             <tr key={e.strategy_hash} className={e.champion ? "bg-water-800/60" : ""}>
@@ -54,12 +55,12 @@ function GenerationPanel({ g }: { g: ArenaGeneration }) {
                 {e.strategy_id && <Link to={`/strategy/base/${encodeURIComponent(e.strategy_id)}`} className="block text-[11px] text-ink-faint mono hover:text-ink">{shortAddr(e.strategy_hash, 8, 4)}</Link>}
               </td>
               <td><MindChip mind={e.mind} /></td>
-              <KnobCells k={e.knobs} />
+              {hasKnobs && <KnobCells k={e.knobs} />}
               <td className="num"><AttestedCell e={e} /></td>
               <td className="num"><LiveCell e={e} /></td>
             </tr>
           ))}
-          {g.entries.length === 0 && <tr><td colSpan={10} className="text-ink-muted">Nobody entered.</td></tr>}
+          {g.entries.length === 0 && <tr><td colSpan={hasKnobs ? 10 : 4} className="text-ink-muted">Nobody entered.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -84,11 +85,11 @@ export function Arena() {
               ))}
             </div>
           </Section>
-          <Section title="Generations" aside={`${q.data.generations.length} so far, newest first`}>
+          <Section plain title="Generations" aside={`${q.data.generations.length} so far, newest first`}>
             <div className="flex flex-col gap-4">{q.data.generations.map((g) => <GenerationPanel key={g.number} g={g} />)}</div>
           </Section>
           {q.data.promotions.length > 0 && (
-            <Section title="Promotions" aside="a real bankroll, moved after a tap on the Ledger">
+            <Section title="Promotions" description="A real bankroll, moved after a tap on the Ledger; the lanista records it on chain only once the transfer is mined.">
               <ul className="text-[13px]">{q.data.promotions.map((p) => <li key={p.tx}>{p.name ?? shortAddr(p.gladiator)} promoted to chain {p.chain_id} with a bankroll of {p.bankroll}, {absTime(p.at)}</li>)}</ul>
             </Section>
           )}

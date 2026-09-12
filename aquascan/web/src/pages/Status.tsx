@@ -12,7 +12,9 @@ export function Status() {
     <div className="fade">
       <h1 className="page-title">Status</h1>
       <p className="page-desc">Where each chain's lane stands against its subgraph, and how much of it is priced. Rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}.</p>
-      <div className="overflow-x-auto panel mt-5">
+      <div className="tile mt-5">
+      <div className="tile-head"><h2>Lanes</h2><span className="note">seven chains, rolled up {relTime(new Date(h.rollup_at).getTime() / 1000)}</span></div>
+      <div className="tile-body flush overflow-x-auto">
         <table>
           <thead><tr><th>Chain</th><th className="num">Read up to block</th><th className="num">Subgraph head</th><th className="num">Behind</th><th className="num">Economic fills</th><th className="num">Priced</th><th className="num">By the minute</th><th className="num">Updated</th></tr></thead>
           <tbody>{h.chains.map((c) => (
@@ -28,7 +30,8 @@ export function Status() {
             </tr>))}</tbody>
         </table>
       </div>
-      <p className="text-xs text-ink-faint mt-4 max-w-2xl">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills that carry a dollar figure; by the minute is the share of those whose reference price came from prints within minutes, the pair's other fills or a same-chain pool, rather than from DefiLlama's hourly price.</p>
+      <div className="tile-foot">Behind counts blocks between the last fill read and the subgraph's own head; a few hundred is normal, since it only advances when a fill happens. Priced is the share of economic fills that carry a dollar figure; by the minute is the share of those whose reference price came from prints within minutes, the pair's other fills or a same-chain pool, rather than from DefiLlama's hourly price.</div>
+      </div>
     </div>
   );
 }

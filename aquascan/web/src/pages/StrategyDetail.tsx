@@ -58,18 +58,18 @@ export function StrategyDetail() {
         {s.docked_at ? <>, docked <When ts={s.docked_at} />. Docked means revoked: tokens never left the wallet.</> : <>. Still live.</>}
       </p>
 
-      {st ? <ScoreTiles s={st} /> : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
+      {st ? <div className="mt-5"><ScoreTiles s={st} /></div> : <p className="mt-5 text-ink-muted">No economic fills yet, so nothing to score.</p>}
       {st && (
         <p className="text-xs text-ink-muted mt-2">{compact(st.fills, 0)} economic fills, first <When ts={st.first_fill_ts} />, last <When ts={st.last_fill_ts} />. {st.tape_ratio > 0 ? <>{percent(st.tape_ratio)} of them scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices.</> : <>Scored against hourly prices: no prints of this pair nearby, on the tape or in a pool.</>}</p>
       )}
 
-      <div className="mt-4 panel px-5 py-4 text-[13px]">
-        <div className="text-xs text-ink-muted">Fees, read from the program</div>
-        <p className="mt-1"><FeeSentence fees={s.fees} makerFee={st?.maker_fee_usd} protocolFee={st?.protocol_fee_usd} /></p>
+      <div className="tile mt-4">
+        <div className="tile-head"><h2>Fees</h2><span className="note">read from the program</span></div>
+        <p className="tile-body text-[13.5px] leading-relaxed"><FeeSentence fees={s.fees} makerFee={st?.maker_fee_usd} protocolFee={st?.protocol_fee_usd} /></p>
       </div>
 
       {st?.pnl_quote && (
-        <div className="mt-4 panel px-5 py-4">
+        <div className="tile mt-4 px-[18px] py-4">
           <div className="text-xs text-ink-muted">Pair-native P&L, no oracle involved</div>
           <div className="text-lg mt-0.5"><span className={st.pnl_quote.value > 0 ? "gain" : st.pnl_quote.value < 0 ? "loss" : ""}>{st.pnl_quote.value > 0 ? "+" : ""}{compact(st.pnl_quote.value, 4)} {st.pnl_quote.quote_symbol ?? shortAddr(st.pnl_quote.quote_token, 6, 4)}</span></div>
           <div className="text-xs text-ink-faint mt-1">Net flows valued at the strategy's own 24-hour VWAP marks. {percent(st.pnl_quote.coverage)} of its base tokens have a mark{st.pnl_quote.mark_age_s ? `, the oldest ${relTime(Date.now() / 1000 - st.pnl_quote.mark_age_s)}` : ""}. {st.takers} distinct takers{st.top_taker_share !== null ? `, the largest took ${percent(st.top_taker_share)} of fills` : ""}{st.self_fills > 0 ? `, ${st.self_fills} fills taken by the maker itself` : ""}.</div>
@@ -77,7 +77,7 @@ export function StrategyDetail() {
       )}
 
       {s.marks.length > 0 && (
-        <Section title="Marks">
+        <Section flush title="Marks">
           <div className="overflow-x-auto panel">
             <table>
               <thead><tr><th>Pair</th><th className="num">Mark</th><th className="num">Fills in window</th><th>Anchored at</th></tr></thead>
@@ -101,7 +101,7 @@ export function StrategyDetail() {
         </details>
       </Section>
 
-      <Section title="Economic fills" aside={`${s.fills.length} of ${s.fills_total}, newest first`}>
+      <Section flush title="Economic fills" aside={`${s.fills.length} of ${s.fills_total}, newest first`}>
         <div className="panel divide-y divide-water-700">
           {s.fills.map((f) => (
             <FillLine key={f.id} f={f}>{f.legs && <LegsSentence legs={f.legs} />}</FillLine>

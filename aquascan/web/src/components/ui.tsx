@@ -113,17 +113,26 @@ export function Failed({ what, error }: { what: string; error: unknown }) {
   return <div className="panel p-5 text-ink-muted">Could not load {what}. {msg === "not found" ? "Nothing here by that name." : `The API answered: ${msg}. Check that the enrichment service and API are running.`}</div>;
 }
 
-export function Section({ title, aside, description, children }: { title: string; aside?: React.ReactNode; description?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="section">
-      <div className="section-head">
-        <div>
-          <h2>{title}</h2>
-          {description && <p className="section-desc">{description}</p>}
+// A section is a tile: the title and an aside in the head, the content in the body, the
+// explanation as a one-line foot. flush: the body is one table or list and sits edge to edge.
+// plain: the old open layout, for a list of panels that are cards themselves.
+export function Section({ title, aside, description, children, flush = false, plain = false }: { title: string; aside?: React.ReactNode; description?: React.ReactNode; children: React.ReactNode; flush?: boolean; plain?: boolean }) {
+  if (plain) {
+    return (
+      <section className="section">
+        <div className="section-head">
+          <div><h2>{title}</h2>{description && <p className="section-desc">{description}</p>}</div>
+          {aside && <div className="section-aside">{aside}</div>}
         </div>
-        {aside && <div className="section-aside">{aside}</div>}
-      </div>
-      {children}
+        {children}
+      </section>
+    );
+  }
+  return (
+    <section className="tile mt-4">
+      <div className="tile-head"><h2>{title}</h2>{aside && <span className="note">{aside}</span>}</div>
+      <div className={`tile-body${flush ? " flush" : ""}`}>{children}</div>
+      {description && <div className="tile-foot">{description}</div>}
     </section>
   );
 }

@@ -105,9 +105,9 @@ function FeePanel({ fees, makerFee, protocolFee, volume }: { fees: DeskFees; mak
   const uniform = fees.maker_fee_bps_min !== null && fees.maker_fee_bps_min === fees.maker_fee_bps_max;
   const side = fees.maker_sides.length === 1 ? (fees.maker_sides[0] === "in" ? "on the token it takes in" : "on the token it gives out") : "on one side of each swap";
   return (
-    <div className="mt-3 panel px-5 py-4 text-[13px]">
-      <div className="text-xs text-ink-muted">Fees, read from the programs</div>
-      <p className="mt-1">
+    <div className="tile mt-4">
+      <div className="tile-head"><h2>Fees</h2><span className="note">read from the programs</span></div>
+      <p className="tile-body text-[13.5px] leading-relaxed">
         {fees.maker_fee_bps === null ? <>Its programs charge no maker fee.</> : (
           <>Charges <b className="font-medium">{feeBps(fees.maker_fee_bps)}</b> {side}{uniform ? "" : `, from ${feeBps(fees.maker_fee_bps_min)} to ${feeBps(fees.maker_fee_bps_max)} across ${compact(fees.decoded, 0)} strategies, weighted by volume`}
             {makerFee.value !== null && volume.value !== null && <>, about <b className="font-medium fee">{usd(makerFee.value)}</b> earned on {usd(volume.value)}</>}.</>
@@ -140,11 +140,11 @@ export function MakerDetail() {
       <p className="mt-2 text-[13.5px]"><span className="text-ink-muted mr-2">Trades</span><Pairs pairs={d.pairs} max={4} /></p>
       <p className="page-desc">First seen <When ts={d.first_seen} />, last active <When ts={d.last_seen} />. {d.tape_ratio > 0 && <>{percent(d.tape_ratio)} of its fills are scored against prints within minutes, the pair's other fills or a same-chain pool; the rest against hourly prices. The band on a rate is one standard error, from the spread of its own fills.</>}</p>
 
-      <ScoreTiles s={d} volumeLabel="Volume, all time" />
+      <div className="mt-5"><ScoreTiles s={d} volumeLabel="Volume, all time" /></div>
       <FeePanel fees={d.fees} makerFee={d.maker_fee_usd} protocolFee={d.protocol_fee_usd} volume={d.volume_usd} />
       <ResultPanel pnl={d.pnl} fees={d.maker_fee_usd} tokens={d.pnl_tokens} rewards={d.rewards} />
 
-      <Section title="Templates" description="The shapes of the programs this maker ships here: the opcode sequence with the arguments ignored. A maker re-ships the same template many times with new parameters.">
+      <Section flush title="Templates" description="The shapes of the programs this maker ships here: the opcode sequence with the arguments ignored. A maker re-ships the same template many times with new parameters.">
         <div className="overflow-x-auto panel">
           <table>
             <thead><tr><th>Template</th><th className="num">Strategies</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min after fill</th><th className="num">Edge at fill</th></tr></thead>
@@ -165,7 +165,7 @@ export function MakerDetail() {
         </div>
       </Section>
 
-      <Section title="Strategies" description="Every program this maker shipped here, newest first. Docked means revoked: the tokens never left the wallet.">
+      <Section flush title="Strategies" description="Every program this maker shipped here, newest first. Docked means revoked: the tokens never left the wallet.">
         <div className="overflow-x-auto panel">
           <table>
             <thead><tr><th>State</th><th>Strategy</th><th>Template</th><th>Shipped</th><th className="num">Fills</th><th className="num">Volume</th><th className="num">Fees earned</th><th className="num">Edge, 5 min</th><th className="num">Edge at fill</th><th className="num">Pair P&L</th><th className="num">Takers</th></tr></thead>
@@ -191,7 +191,7 @@ export function MakerDetail() {
         </div>
       </Section>
 
-      <Section title="Recent economic fills">
+      <Section flush title="Recent economic fills" description="One line per fill: what it was worth at fill time, five minutes and an hour later, and the reference it was scored against.">
         <div className="panel list">
           {d.recent_fills.map((f) => (
             <FillLine key={f.id} f={f}>
