@@ -122,5 +122,32 @@ export function makeServer(api: string): McpServer {
     return text(d, s);
   }));
 
+  server.registerTool("arena_promotion", {
+    title: "Who the arena would pay", description: "The season's standing and the promotion an agent may propose: the last closed generations of Naumachy's arena on Base, champions ranked by wins then by attested score, and the exact wallet-cli command that pays the champion from a Ledger account. Read-only. This tool never signs and never sends: a human runs the command and confirms the recipient and the amount on the Ledger device; only once the transfer is mined does the lanista record promote() on the registry.",
+    inputSchema: { generations: z.number().int().min(1).max(50).default(8), prize_usdc: z.number().positive().default(30), account: z.string().min(1).max(40).default("base-1") },
+  }, async ({ generations, prize_usdc, account }) => wrap(async () => {
+    const d = (await get("arena")) as { generations?: { number: number; closed_at: number | null; champion: { address: string; name: string; strategy_hash: string; score_usd: number | null } | null }[] };
+    const closed = (d.generations ?? []).filter((g) => g.closed_at).sort((a, b) => b.number - a.number).slice(0, generations);
+    const tally = new Map<string, { name: string; address: string; strategy_hash: string; wins: number; attested_usd: number; generations_won: number[] }>();
+    for (const g of closed) {
+      if (!g.champion) continue;
+      const k = g.champion.address.toLowerCase();
+      const t = tally.get(k) ?? { name: g.champion.name, address: g.champion.address, strategy_hash: g.champion.strategy_hash, wins: 0, attested_usd: 0, generations_won: [] };
+      t.wins += 1; t.attested_usd += g.champion.score_usd ?? 0; t.generations_won.push(g.number); tally.set(k, t);
+    }
+    const ranking = [...tally.values()].sort((a, b) => b.wins - a.wins || b.attested_usd - a.attested_usd).map((r) => ({ ...r, attested_usd: +r.attested_usd.toFixed(6) }));
+    const champion = ranking[0] ?? null;
+    return text({
+      season: { generations: closed.map((g) => g.number), without_champion: closed.filter((g) => !g.champion).map((g) => g.number) },
+      ranking, champion,
+      proposal: champion ? {
+        pay: `${prize_usdc} USDC`, from: `Ledger account ${account}`, to: champion.address, chain: "base",
+        command: `wallet-cli send --account ${account} --to ${champion.address} --amount '${prize_usdc} USDC'`,
+        then: "yarn workspace @naumachy/arena promote  (waits for the transfer, then the lanista writes promote() on ArenaRegistry)",
+      } : null,
+      boundary: "agents propose, a human approves on the device, hardware signs; nothing in the arena holds the prize or a signer",
+    }, new Set(["ArenaRegistry on Base, as attested by the lanista and indexed by the arena subgraph"]));
+  }));
+
   return server;
 }

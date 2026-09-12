@@ -30,6 +30,7 @@ Local, over stdio, from a clone (`yarn install` once):
 | `aquascan_takers` | Who fills a strategy, and the markout each taker inflicted. |
 | `aquascan_search` | Makers and strategies by address, hash, label or template. |
 | `arena_generations` | The arena's record: generations, entries, attested scores, champions, lineage, promotions. |
+| `arena_promotion` | Who the arena would pay: the season's champions ranked by wins then attested score, and the exact `wallet-cli send` line for the prize. Read-only; a human signs on the Ledger, the lanista records `promote()` after the transfer. |
 
 Markouts are the maker's side: negative means the flow was informed. The verdict of record in the arena is the attested score; Aquascan's live figures keep moving.
 
