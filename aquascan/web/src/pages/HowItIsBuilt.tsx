@@ -134,9 +134,12 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
         later(() => { A.n += 1; $("#gen")!.textContent = String(A.n); }, PHASE - 150);
       },
     ];
-    const go = (k: number) => { clearPhase(); A.phase = k; light(k); phases[k](); if (A.auto) later(() => go((k + 1) % 4), PHASE); };
+    // nine generations, three seasons; then the field starts again from generation zero
+    const GENERATIONS = 9;
+    const go = (k: number) => { clearPhase(); A.phase = k; light(k); phases[k](); if (A.auto) later(() => (k === 3 && A.n >= GENERATIONS ? restart() : go((k + 1) % 4)), PHASE); };
+    let restart = () => { /* set below */ };
     const setAuto = (on: boolean) => { A.auto = on; $("#ringwrap")?.classList.toggle("paused", !on); if (on) go((A.phase + 1) % 4); else clearPhase(); };
-    const restart = () => { clearPhase(); A.n = 0; $("#gen")!.textContent = "0"; programs = START.map((p) => [...p]); go(0); };
+    restart = () => { clearPhase(); A.n = 0; $("#gen")!.textContent = "0"; programs = START.map((p) => [...p]); go(0); };
     const jump = (k: number) => { if (A.auto) setAuto(false); go(k); (document.activeElement as HTMLElement | null)?.blur?.(); };
     $$("#nodes .hit").forEach((g) => { const k = Number((g as HTMLElement).dataset.k); g.addEventListener("click", () => jump(k)); g.addEventListener("keydown", (e) => { const ke = e as KeyboardEvent; if (ke.key === "Enter" || ke.key === " ") { ke.preventDefault(); ke.stopPropagation(); jump(k); } }); });
     STEPS.forEach((st, k) => $(`#b-${st}`)?.addEventListener("click", () => jump(k)));
