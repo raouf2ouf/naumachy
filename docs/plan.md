@@ -117,7 +117,7 @@ Agreed 2026-09-07 evening, after M1 to M4 ran on the gym. Each step unblocks the
 3. **First minded season on the gym**, on the baked context, as soon as the key is in.
 4. **Subgraph MCP inside the minds**: the mind queries the arena and pools subgraphs itself through The Graph's Subgraph MCP (fallback: a tool of ours running the same GraphQL against the gateway); its queries land in the generation file. Second season with it. This is the composition claim (GA.1) and the load-bearing claim (GB.1).
 5. **Arena page in Aquascan**: generations, entries, attested score beside the live figure, champion, lineage, knobs diff, rationale. Interface written first, Kate informed.
-6. **Base**: six keys generated into the encrypted secrets file, the lean float funded by Raouf, contracts deployed, arena subgraph published to the network, mainnet Aquascan pointed at our router.
+6. **Base**: six keys generated into the encrypted secrets file, the lean float funded by Raouf, contracts deployed, arena subgraph published to the network, mainnet Aquascan pointed at our router. Done 2026-09-12: generation 0 live, `infra/arena/`.
 7. **VPS and Ledger**: Aquascan migrated, Caddy, the hourly arena loop booting from Key Ring; one attempt at USB/IP enrollment, then the transplant fallback, documented either way. The promotion step in the lanista, then Raouf's first tap on the Flex.
 8. **Aquascan MCP server** (`mcp/`): the analyst over the API including the arena endpoints. Built by Raouf's vertical, Kate informed.
 9. **Predator versus defended maker** in the gym, recorded and scored: the pool-manipulation take against a flat-fee maker, then against ToxicityFee plus RiskCap.
