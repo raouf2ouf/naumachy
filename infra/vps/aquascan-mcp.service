@@ -1,0 +1,17 @@
+[Unit]
+Description=Aquascan MCP server (Streamable HTTP on /mcp)
+After=network-online.target aquascan-api.service
+Wants=network-online.target
+
+[Service]
+User=naumachy
+WorkingDirectory=/home/naumachy/naumachy/mcp
+Environment=PATH=/home/naumachy/node-current/bin:/usr/local/bin:/usr/bin:/bin
+Environment=AQUASCAN_API=http://127.0.0.1:3100
+Environment=MCP_PORT=3110
+ExecStart=/home/naumachy/node-current/bin/yarn workspace @naumachy/aquascan-mcp http
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

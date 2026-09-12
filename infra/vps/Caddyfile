@@ -1,8 +1,11 @@
-# Aquascan on naumachy.xyz: the built web app as static files, the API proxied on /api.
+# Aquascan on naumachy.xyz: the built web app as static files, the API proxied on /api, the MCP server on /mcp.
 naumachy.xyz, www.naumachy.xyz {
 	encode zstd gzip
 	handle /api/* {
 		reverse_proxy 127.0.0.1:3100
+	}
+	handle /mcp {
+		reverse_proxy 127.0.0.1:3110
 	}
 	handle {
 		root * /srv/naumachy/web

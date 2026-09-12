@@ -1,0 +1,21 @@
+{
+  "name": "@naumachy/aquascan-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Aquascan's questions as MCP tools, over the read-only API. stdio for editors, Streamable HTTP when hosted.",
+  "scripts": {
+    "stdio": "node --import tsx src/stdio.ts",
+    "http": "node --import tsx src/http.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
