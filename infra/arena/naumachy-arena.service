@@ -6,10 +6,14 @@ Wants=network-online.target
 [Service]
 User=naumachy
 WorkingDirectory=/home/naumachy/naumachy/agents
-EnvironmentFile=/home/naumachy/arena.env
+# the secrets are unsealed from the Ledger Key Ring into tmpfs first; nothing clear stays on disk
+RuntimeDirectory=naumachy
+RuntimeDirectoryPreserve=yes
+ExecStartPre=/home/naumachy/naumachy/infra/arena/unseal.sh
+EnvironmentFile=-/run/naumachy/arena.env
 Environment=PATH=/home/naumachy/node-current/bin:/home/naumachy/.foundry/bin:/usr/local/bin:/usr/bin:/bin
 Environment=ANVIL=/home/naumachy/.foundry/bin/anvil
-ExecStart=/home/naumachy/node-current/bin/node --import tsx src/evolve.ts
+ExecStart=/bin/bash -c "set -a; . /run/naumachy/arena.env; exec /home/naumachy/node-current/bin/node --import tsx src/evolve.ts"
 Restart=always
 RestartSec=60
 
