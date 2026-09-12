@@ -4,6 +4,7 @@ import { createPublicClient, createWalletClient, http, keccak256, nonceManager, 
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig, REPO_ROOT } from "@naumachy/arena/config";
 import { aquascanScore, lanista, arenaAbi } from "@naumachy/arena/lanista";
+import { entriesOf } from "./context.js";
 import { runGladiator } from "./gladiator.js";
 
 const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
@@ -30,8 +31,11 @@ async function main() {
     if (already === null) await lanista.open(pub, lan, arena, keccak256(stringToHex(`tape-${round % 2 === 0 ? "train" : "holdout"}-${Date.now()}`)));
     const generation = Number(await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" }));
     log(`generation ${generation} ${already === null ? `open (${round % 2 === 0 ? "train" : "hold-out"} tape)` : "was still open, reusing it"}; the ${process.env.GLADIATOR_MIND === "heuristic" ? "heuristic controls" : "minds"} are writing`);
-    const entries: { name: string; address: Address; hash: Hex }[] = [];
+    // entries already in the open generation (the seeded field, or a run that stopped) stand; only the roster's missing gladiators write
+    const entries: { name: string; address: Address; hash: Hex }[] = already === null ? [] : await entriesOf(cfg, generation).catch(() => []);
+    if (entries.length) log(`${entries.length} entries already stand in generation ${generation}: ${entries.map((e) => e.name).join(", ")}`);
     for (const g of roster) {
+      if (entries.some((e) => e.address.toLowerCase() === privateKeyToAccount(g.key).address.toLowerCase())) continue;
       try {
         const r = await runGladiator(cfg, client, g.key, g.name, api, arena);
         entries.push({ name: r.name, address: r.address, hash: r.strategyHash });

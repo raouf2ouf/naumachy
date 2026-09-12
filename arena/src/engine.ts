@@ -121,6 +121,7 @@ async function main() {
     tick += 1;
     if (tick % 15 === 1 || gladiators.length === 0) {     // every 15 ticks, about half a minute, the roster is re-read
       try { gladiators = await liveGladiators(cfg.gymSubgraph, cfg.router); } catch (err) { log(String(err).slice(0, 160)); }
+      if (tick % 15 === 1) log(`tick ${tick} | ${gladiators.length} live | fills ${fills} (arbs ${arbs}) | ${((Date.now() - started) / 1000 / tick).toFixed(1)} s per tick`);
     }
     // arbitrage: on every pair, does a gladiator sell the base cheaper, or buy it dearer, than the pool by more than the edge?
     for (const pair of market.pairs) {

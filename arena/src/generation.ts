@@ -74,7 +74,7 @@ async function main() {
     const generation = await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" });
     // entries from the gym arena subgraph, scores from the gym Aquascan API
     const q = `{ entries(where: { generation: "${generation}" }) { gladiator { id } strategyHash } }`;
-    const res = await fetch(cfg.arenaSubgraph, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
+    const res = await fetch(cfg.arenaSubgraph, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }), signal: AbortSignal.timeout(30_000) });
     const entries = ((await res.json()) as { data: { entries: { gladiator: { id: Address }; strategyHash: Hex }[] } }).data.entries;
     let champion: { gladiator: Address; hash: Hex; score: bigint } | null = null;
     for (const e of entries) {

@@ -40,7 +40,7 @@ export const gladiator = {
 
 // Aquascan's verdict on a strategy, read from the gym API: the 5-minute markout sum and its band.
 export async function aquascanScore(api: string, chain: string, strategyId: string): Promise<{ scoreUsd: number | null; seBps: number | null; bps: number | null; fills: number; volume: number | null; edgeUsd: number | null }> {
-  const res = await fetch(`${api}/api/strategy/${chain}/${encodeURIComponent(strategyId)}?limit=1`);
+  const res = await fetch(`${api}/api/strategy/${chain}/${encodeURIComponent(strategyId)}?limit=1`, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`aquascan ${res.status} for ${strategyId.slice(0, 12)}`);
   const d = (await res.json()) as { stats: { fills: number; volume_usd: { value: number | null }; edge_usd: { value: number | null }; markout_5m_usd: { value: number | null }; markout_5m_bps: { bps: number; se: number | null } | null } | null };
   const st = d.stats;

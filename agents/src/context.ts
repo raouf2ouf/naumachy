@@ -38,12 +38,18 @@ const publicSpec = (f: GenFile | null): ProgramSpec | null => (f?.spec ? { pairs
 const publicSummary = (f: GenFile | null): Record<string, unknown> | null => { if (!f?.knobs) return null; const { rationale: _r, ...rest } = f.knobs; return rest; };
 
 async function gql<T>(url: string, query: string): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }) });
+  const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }), signal: AbortSignal.timeout(30_000) });
   const body = (await res.json()) as { data?: T; errors?: unknown };
   if (!body.data) throw new Error(`subgraph: ${JSON.stringify(body.errors).slice(0, 200)}`);
   return body.data;
 }
 const name = (hex: string) => Buffer.from(hex.slice(2), "hex").toString("utf8").replace(/\0+$/, "");
+
+// The entries of one generation, from the arena subgraph.
+export async function entriesOf(cfg: Config, generation: number): Promise<{ name: string; address: Address; hash: Hex }[]> {
+  const g = await gql<{ entries: { gladiator: { id: Address; name: string }; strategyHash: Hex }[] }>(cfg.arenaSubgraph, `{ entries(where: { generation: "${generation}" }) { gladiator { id name } strategyHash } }`);
+  return g.entries.map((e) => ({ name: name(e.gladiator.name), address: e.gladiator.id, hash: e.strategyHash }));
+}
 
 export async function gatherContext(cfg: Config, api: string, me: Address, myName: string): Promise<Context> {
   const arena = cfg.arenaSubgraph; const pools = cfg.poolsSubgraph;
@@ -68,7 +74,7 @@ export async function gatherContext(cfg: Config, api: string, me: Address, myNam
       if (!listing && bytes) { try { listing = disassemble(bytes, cfg.market); } catch { listing = null; } }
       let v: Verdict = { gladiator: e.gladiator.id, name: name(e.gladiator.name), strategyHash: e.strategyHash, spec: publicSpec(f), listing, summary: publicSummary(f), attested, liveNote: "live Aquascan figures keep moving after close; the attested score is the record", scoreUsd: null, bps: null, seBps: null, fills: null, volume: null, feeBps: null };
       try {
-        const res = await fetch(`${api}/api/strategy/base/${encodeURIComponent(strategyId)}?limit=1`);
+        const res = await fetch(`${api}/api/strategy/base/${encodeURIComponent(strategyId)}?limit=1`, { signal: AbortSignal.timeout(30_000) });
         if (res.ok) {
           const d = (await res.json()) as { fees: { maker_fee_bps: number | null } | null; stats: { fills: number; volume_usd: { value: number | null }; edge_usd: { value: number | null }; markout_5m_usd: { value: number | null }; markout_5m_bps: { bps: number | null; se: number | null } | null } | null };
           if (d.stats) v = { ...v, scoreUsd: d.stats.markout_5m_usd.value, bps: d.stats.markout_5m_bps?.bps ?? null, seBps: d.stats.markout_5m_bps?.se ?? null, fills: d.stats.fills, volume: d.stats.volume_usd.value, feeBps: d.fees?.maker_fee_bps ?? null };
