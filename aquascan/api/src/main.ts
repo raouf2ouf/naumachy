@@ -1,3 +1,7 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { windowSeconds } from "./provenance.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import pg from "pg";
 import { health, overview, series, desks, desk, makers, maker, strategy, search, rollupAt } from "./queries.js";
@@ -8,19 +12,31 @@ const port = Number(process.env.AQUASCAN_API_PORT ?? 3100);
 
 // The overview aggregates the whole window of fills on every call, seconds on the big chains, and
 // its answer only changes when the rollup runs. So it is computed once per rollup per (window,
-// chain) and served from memory; a warmer recomputes the common views right after each rollup,
-// so the first visitor after a rollup does not pay for it either.
+// chain) and served from memory. Three rules keep a visitor from ever waiting for it:
+//   1. stale while revalidating: a cached answer from the previous rollup is served at once and
+//      recomputed in the background, one computation per key at a time;
+//   2. the warmer recomputes every window and chain after each rollup, the landing page first;
+//   3. the cache is written to disk after each warm and read back at boot, so a restart serves the
+//      last answers immediately instead of a cold seven seconds.
 const CHAINS = ["ethereum", "base", "arbitrum", "optimism", "polygon", "bsc", "robinhood"];
+const WINDOWS_WARM = ["30d", "7d", "all", "24h"];   // the landing page's window first
+const cacheFile = process.env.AQUASCAN_CACHE ?? join(tmpdir(), "aquascan-overview-cache.json");
 const overviewCache = new Map<string, { rollup: number; body: unknown }>();
+const inflight = new Map<string, Promise<unknown>>();
 let lastRollup = 0;
+const keyOf = (window: string | null, chain: string | null) => `${windowSeconds(window).name}|${chain && chain !== "all" ? chain : ""}`;
+function compute(key: string, window: string | null, chain: string | null, at: number): Promise<unknown> {
+  const running = inflight.get(key); if (running) return running;
+  const p = overview(pool, window, chain === "all" ? null : chain).then((body) => { overviewCache.set(key, { rollup: at, body }); return body; }).finally(() => inflight.delete(key));
+  inflight.set(key, p); return p;
+}
 async function cachedOverview(window: string | null, chain: string | null, rollup?: number): Promise<unknown> {
   const at = rollup ?? (await rollupAt(pool)).getTime();
-  const key = `${window ?? ""}|${chain ?? ""}`;
+  const key = keyOf(window, chain);
   const hit = overviewCache.get(key);
   if (hit && hit.rollup === at) return hit.body;
-  const body = await overview(pool, window, chain);
-  overviewCache.set(key, { rollup: at, body });
-  return body;
+  if (hit) { void compute(key, window, chain, at).catch(() => undefined); return hit.body; }   // stale, served now, refreshed behind
+  return compute(key, window, chain, at);
 }
 async function warm() {
   try {
@@ -28,10 +44,14 @@ async function warm() {
     if (at === lastRollup) return;
     lastRollup = at;
     const t0 = Date.now();
-    for (const chain of [null, ...CHAINS]) await cachedOverview(null, chain, at);
+    for (const window of WINDOWS_WARM) for (const chain of [null, ...CHAINS]) await cachedOverview(window, chain, at);
     console.log(new Date().toISOString(), `overview warmed for rollup ${new Date(at).toISOString()} in ${Date.now() - t0} ms`);
+    try { writeFileSync(cacheFile, JSON.stringify([...overviewCache.entries()])); } catch (err) { console.error(new Date().toISOString(), "cache write", String(err).slice(0, 120)); }
   } catch (err) { console.error(new Date().toISOString(), "warm", String(err).slice(0, 200)); }
 }
+try {
+  if (existsSync(cacheFile)) { for (const [k, v] of JSON.parse(readFileSync(cacheFile, "utf8")) as [string, { rollup: number; body: unknown }][]) overviewCache.set(k, v); console.log(new Date().toISOString(), `overview cache read back: ${overviewCache.size} views`); }
+} catch (err) { console.error(new Date().toISOString(), "cache read", String(err).slice(0, 120)); }
 
 type Handler = (url: URL, params: string[]) => Promise<unknown>;
 const routes: [RegExp, Handler][] = [
