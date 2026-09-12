@@ -173,9 +173,16 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
     layout(); window.addEventListener("resize", layout);
 
     // ---- reveal, keyboard, spotlight ----
-    const reveal = (card: Element) => { card.classList.add("on"); if (card.id === "s6") restart(); };
+    const reveal = (card: Element) => { card.classList.add("on"); };
     const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } }), { threshold: 0.25 });
     $$(".card").forEach((c) => io.observe(c));
+    // the arena story starts from generation zero each time the card comes into view, and rests while it is off screen
+    const arenaCard = $("#s6")!;
+    const arenaIo = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { A.auto = true; $("#ringwrap")?.classList.remove("paused"); restart(); }
+      else { clearPhase(); $("#ringwrap")?.classList.add("paused"); }
+    }, { threshold: 0.45 });
+    arenaIo.observe(arenaCard);
     const focusables = () => $$(".card, .stats");
     const spotlight = () => {
       if (!el.classList.contains("present")) return;
@@ -197,7 +204,7 @@ function useStory(root: React.RefObject<HTMLDivElement | null>) {
     if (window.location.hash.includes("present")) setPresent(true);
 
     return () => {
-      clearPhase(); if (lightTimer) clearInterval(lightTimer); io.disconnect();
+      clearPhase(); if (lightTimer) clearInterval(lightTimer); io.disconnect(); arenaIo.disconnect();
       window.removeEventListener("resize", layout); window.removeEventListener("keydown", onKey); window.removeEventListener("scroll", spotlight); window.removeEventListener("resize", spotlight);
       document.body.classList.remove("hb-present");
     };
