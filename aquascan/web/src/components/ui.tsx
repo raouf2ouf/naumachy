@@ -64,9 +64,9 @@ export function MakerLink({ chain, maker, makerLabel, templates, pairs, classNam
 }
 
 export function ThemeToggle() {
-  const current = document.documentElement.dataset.theme ?? "dark";
+  const current = document.documentElement.dataset.theme ?? "light";
   const flip = () => {
-    const next = (document.documentElement.dataset.theme ?? "dark") === "dark" ? "light" : "dark";
+    const next = (document.documentElement.dataset.theme ?? "light") === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem("aquascan-theme", next); } catch { /* private mode */ }
   };
