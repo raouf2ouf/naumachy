@@ -98,8 +98,9 @@ export async function validateOnPrivateFork(cfg: Config, key: Hex, compiled: Com
     const chain = gymChain(cfg, rpc);
     const pub = createPublicClient({ chain, transport: http(rpc) });
     const wallet = createWalletClient({ chain, transport: http(rpc), account: privateKeyToAccount(key) });
-    // gas money on the private fork for the two accounts that transact there; a live wallet holds only what its real transactions need
-    for (const a of [wallet.account!.address, privateKeyToAccount(cfg.engineKey).address]) await fetch(rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "anvil_setBalance", params: [a, "0x56BC75E2D63100000"] }) });
+    // gas money on the private fork for the two accounts that transact there and for the taker contract, since the router is quoted from its address
+    // (a Base fork carries a real base fee, so an eth_call from an empty account is refused for gas); a live wallet holds only what its real transactions need
+    for (const a of [wallet.account!.address, privateKeyToAccount(cfg.engineKey).address, cfg.taker]) await fetch(rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "anvil_setBalance", params: [a, "0x56BC75E2D63100000"] }) });
     const tokens = compiled.tokens.map((t) => t.address);
     const shipped = await ship(pub, wallet, cfg.aqua, cfg.router, compiled.bytes, tokens, amounts);
     const td = await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.taker, true] });
