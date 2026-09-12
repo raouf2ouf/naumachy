@@ -125,10 +125,21 @@ export async function validateOnPrivateFork(cfg: Config, key: Hex, compiled: Com
     if (compiled.pairs.length === 3) {
       // the triangle: the arena's passed taker, driven by the engine's account, 50 USDC around and back
       const engine = createWalletClient({ chain, transport: http(rpc), account: privateKeyToAccount(cfg.engineKey) });
+      // a leg that the program refuses is reported by name (OracleAnchorStale, RiskCapExceeded, ...) and by pair, so the mind can answer it
+      const sym = (a: Address) => compiled.tokens.find((t) => t.address.toLowerCase() === a.toLowerCase())?.symbol ?? a.slice(0, 8);
+      const reason = (err: unknown) => { const e = err as { shortMessage?: string; message?: string; metaMessages?: string[] }; return (e.shortMessage ?? e.message ?? String(err)).split("\n")[0].slice(0, 200); };
       const swap = async (tokenIn: Address, tokenOut: Address, amountIn: bigint): Promise<bigint> => {
-        const { result } = await pub.simulateContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args: [shipped.order, tokenIn, tokenOut, amountIn, td], account: engine.account });
-        const h = await engine.writeContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args: [shipped.order, tokenIn, tokenOut, amountIn, td] });
-        const r = await pub.waitForTransactionReceipt({ hash: h }); if (r.status !== "success") throw new Error("a leg of the loop reverted");
+        const args = [shipped.order, tokenIn, tokenOut, amountIn, td] as const;
+        let result: readonly [bigint, bigint];
+        try { ({ result } = await pub.simulateContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args, account: engine.account })); }
+        catch (err) { throw new Error(`the loop's ${sym(tokenIn)} -> ${sym(tokenOut)} leg is refused by your program: ${reason(err)}`); }
+        const h = await engine.writeContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args });
+        const r = await pub.waitForTransactionReceipt({ hash: h });
+        if (r.status !== "success") {
+          let why = "reverted when mined, one block after it simulated clean (a time-dependent check, such as the anchor's staleness)";
+          try { await pub.simulateContract({ address: cfg.taker, abi: takerAbi, functionName: "swap", args, account: engine.account, blockNumber: r.blockNumber }); } catch (err) { why = reason(err); }
+          throw new Error(`the loop's ${sym(tokenIn)} -> ${sym(tokenOut)} leg ${why}`);
+        }
         return result[1];
       };
       const usdcIn = BigInt(Math.round(cfg.loopUsdc * 1e6));
