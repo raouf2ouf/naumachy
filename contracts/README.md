@@ -1,6 +1,6 @@
 # contracts
 
-Foundry project. Owner: Rudis vertical.
+Foundry project: the router with Naumachy's instructions, the arena contracts and their tests.
 
 - `src/NaumachyRouter.sol`: the full SwapVM v1.0.2 router redeployed with Naumachy's instructions appended. Strategies ship to the canonical Aqua registry with this router as their app.
 - `src/NaumachyOpcodes.sol`: the instruction table. Upstream bytes are unchanged (runtime byte = static slot minus one, `0x0a` jump through `0x2d` aquaDynamicProtocolFeeAmountIn); ours follow.
@@ -12,7 +12,7 @@ Foundry project. Owner: Rudis vertical.
 - `src/arena/Taker.sol`: the arena's taker, paying the maker through Aqua's push in the router's callback; the gym deploys two, one holding a pass and one anonymous. `src/arena/TakerData.sol` packs the taker traits for off-chain engines.
 - `script/ShipGladiator.s.sol`: ships the gladiator above from the broadcaster's wallet, knobs by environment.
 - `src/oracles/PoolPriceOracle.sol`: a Chainlink-shaped view of a Uniswap v3 pool, `latestRoundData()` answering token1 per token0 with 18 decimals from the pool's current sqrt price. Aquascan scores the same pool's swaps, so a strategy anchored here is judged against the reference it quotes from.
-- `test/NaumachyRouter.t.sol`: first blood on a fork of Base. A gladiator program `RiskCap > ToxicityFee > OracleAnchor > XYCSwap > Salt` ships to the canonical registry with real WETH and USDC; quotes track the pool both ways, swaps move tokens between the wallets, quote equals swap, the round trip never pays the taker, the fee widens after a drain and forgets after the window, the cap stops oversized fills.
+- `test/NaumachyRouter.t.sol`: the router on a fork of Base. A gladiator program `RiskCap > ToxicityFee > OracleAnchor > XYCSwap > Salt` ships to the canonical registry with real WETH and USDC; quotes track the pool both ways, swaps move tokens between the wallets, quote equals swap, the round trip never pays the taker, the fee widens after a drain and forgets after the window, the cap stops oversized fills.
 - `test/NaumachyPairs.t.sol`: one inventory, three markets, on the same fork. A strategy ships WETH, USDC and cbBTC and quotes all three pairs at their own pools; a taker who loops USDC to WETH to cbBTC to USDC never profits, and the reverse loop neither; one reference 1% off on one pair is exactly what the loop drains (about 1% of the loop less three fees); the pass gate refuses an anonymous quote before any price is computed; a fee can differ by the token the taker pays (a `JumpIfTokenIn` branch, 20 bps paying USDC and 2 bps paying WETH, quote and swap agreeing on both branches); the risk cap holds on every pair, and Aqua refuses a token the strategy never shipped before the program runs.
 - `script/Deploy.s.sol`: deploys the router, one pool oracle per arena pair (WETH/USDC, USDC/cbBTC, WETH/cbBTC, all 0.05% on Base), the two takers, the pass (one minted to the routed taker) and the registry; the same script serves the gym fork and Base. `infra/gym/addresses.sh` writes `infra/data/gym/addresses.json` from the broadcast.
 

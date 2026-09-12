@@ -1,6 +1,6 @@
 # agents
 
-The gladiators' minds. Owner: Rudis vertical.
+The gladiators' minds.
 
 One process per gladiator per generation. It reads the arena so far (generations, entries, attested scores, the champion), every desk's live verdict on the gym Aquascan, the pool's recent behaviour, and every rival's program as compiled (public: the bytes are on chain and the dialect lists them). It then writes its next program in the arena's dialect through one call to the Claude API: which of the three pairs to ship (one ledger behind all of them), the cap, and an ordered list of instructions from the menu (a pass gate, a flat fee, a toxicity fee, fees chosen by the token the taker pays, an oracle anchor with its depth, and the swap, last). `arena/src/program.ts` compiles the list to bytes (RiskCap first, Salt last, branches as conditional jumps) and prints the listing. The draft is validated on a private anvil forked from the gym (ship, quote both ways on every pair, and, with three pairs, a 50 USDC loop around the triangle that must not pay the taker); a program the compiler or the validator refuses goes back to the mind once with the verdict (`GLADIATOR_ATTEMPTS`). Then it docks its previous program, ships the new one from its own wallet, and enters the generation. Its program, listing, rationale, draft prices, refusals and what it saw go to `infra/data/gym/generations/<generation>-<address>.json`.
 

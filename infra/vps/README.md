@@ -1,11 +1,11 @@
 # infra/vps
 
-Aquascan on naumachy.xyz: a Hostinger KVM in Frankfurt (4 vCPU, 16 GB, 200 GB NVMe, Ubuntu 26.04), reached as `ssh naumachy` from Raouf's Mac. The gym stays on the Mac; the live arena on Base joins this host later.
+Aquascan on naumachy.xyz: a Hostinger KVM in Frankfurt (4 vCPU, 16 GB, 200 GB NVMe, Ubuntu 26.04), reached over SSH. The gym runs on a development machine; the live arena's two units run on this host (`infra/arena`).
 
 What runs where:
 
 - Postgres in Docker (`infra/aquascan/docker-compose.yml`, data under `infra/data/aquascan/postgres` of the clone), bound to 127.0.0.1:5433.
-- The enrichment loop and the API as systemd units (`aquascan-enrich.service`, `aquascan-api.service`), user `naumachy`, Node 22 from nvm behind the `/home/naumachy/node-current` symlink, yarn through corepack. The API listens on 127.0.0.1:3100.
+- The enrichment loop, the API and the MCP server as systemd units (`aquascan-enrich.service`, `aquascan-api.service`, `aquascan-mcp.service`), and the arena's engine and loop (`infra/arena/naumachy-*.service`), user `naumachy`, Node 22 from nvm behind the `/home/naumachy/node-current` symlink, yarn through corepack. The API listens on 127.0.0.1:3100.
 - Caddy serves the built web app from `/srv/naumachy/web` and proxies `/api/*` to the API; certificates come from Let's Encrypt once `naumachy.xyz` and `www` point at the host.
 - The firewall allows 22, 80 and 443 only.
 
