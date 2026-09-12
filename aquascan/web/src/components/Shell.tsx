@@ -24,9 +24,9 @@ export function Shell() {
   return (
     <div className="shell">
       <aside className="rail">
-        <NavLink to="/" className="brand" aria-label="Aquascan, overview">
+        <NavLink to="/" className="brand" aria-label="Naumachy Aquascan, overview">
           <img className="brand-mark" src="/logos/naumachy.png" alt="" width="52" height="32" />
-          <span className="brand-name">Aquascan</span><span className="brand-tag">every Aqua strategy, re-priced</span>
+          <span className="brand-name">Naumachy</span><span className="brand-tag">Aquascan</span>
         </NavLink>
         <div>
           {groups.map((g) => (
