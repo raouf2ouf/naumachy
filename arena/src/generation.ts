@@ -1,9 +1,10 @@
-import { createPublicClient, createWalletClient, http, keccak256, stringToHex, toHex, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, keccak256, nonceManager, stringToHex, toHex, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { loadConfig, ledgerFor, REPO_ROOT } from "./config.js";
 import { anchoredSpec, compile, summarize, ARCHETYPE_ANCHORED, ARCHETYPE_AUTHORED, type ProgramSpec } from "./program.js";
-import { ship } from "./ship.js";
+import { ship, dock } from "./ship.js";
+import { liveGladiators } from "./orders.js";
 import { aquascanScore, gladiator, lanista, arenaAbi } from "./lanista.js";
 
 const log = (...p: unknown[]) => console.log(new Date().toISOString(), ...p);
@@ -18,7 +19,7 @@ async function main() {
   const chain = { id: cfg.chainId, name: "gym", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpc] } } } as const;
   const pub = createPublicClient({ chain, transport: http(cfg.rpc) });
   const lanistaKey = (process.env.LANISTA_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as Hex;
-  const lan = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount(lanistaKey) });
+  const lan = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount(lanistaKey, { nonceManager }) });
   const arena = (process.env.ARENA ?? JSON.parse(readFileSync(process.env.GYM_ADDRESSES ?? REPO_ROOT + "infra/data/gym/addresses.json", "utf8")).arena) as Address;
   const keys = (process.env.GLADIATOR_KEYS ?? [
     "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",   // anvil 1
@@ -30,8 +31,10 @@ async function main() {
   const api = process.env.AQUASCAN_API ?? "http://127.0.0.1:3101";
 
   if (mode === "open") {
-    const tape = keccak256(stringToHex(`tape-${Date.now()}`));
-    log("lanista opens a generation", await lanista.open(pub, lan, arena, tape));
+    // a generation left open by an earlier run is reused, never abandoned (as evolve does)
+    const already = await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" }).catch(() => null);
+    if (already === null) log("lanista opens a generation", await lanista.open(pub, lan, arena, keccak256(stringToHex(`tape-${Date.now()}`))));
+    else log(`generation ${already} is already open; seeding it`);
     const generation = Number(await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" }));
     // four seeds: the anchored archetype at three settings on WETH/USDC, and one that ships all three pairs behind the pass gate
     const seeds: { name: string; spec: ProgramSpec; archetype: Hex }[] = [
@@ -40,10 +43,17 @@ async function main() {
       { name: "wide", spec: anchoredSpec({ capBps: 2000, feeBaseBps: 15, feeSlopeBps: 100, feeMaxBps: 80, windowSeconds: 600, depth: 50 }), archetype: ARCHETYPE_ANCHORED },
       { name: "flat", spec: { pairs: ["WETH/USDC", "cbBTC/USDC", "cbBTC/WETH"], capBps: 2000, ops: [{ op: "gate" }, { op: "flatFee", bps: 8 }, { op: "anchor", depth: 100 }, { op: "xyc" }] }, archetype: ARCHETYPE_AUTHORED },
     ];
-    const dir = `${REPO_ROOT}infra/data/gym/generations`; mkdirSync(dir, { recursive: true });
+    // SEED_FILE: a JSON { seeds: [{ name, spec }] } replaces the lanista's four, e.g. the gym's last field going live
+    const fromFile = process.env.SEED_FILE ? (JSON.parse(readFileSync(process.env.SEED_FILE, "utf8")) as { seeds: { name: string; spec: ProgramSpec }[] }).seeds.map((s) => ({ name: s.name, spec: s.spec, archetype: ARCHETYPE_AUTHORED })) : null;
+    const roster = fromFile ?? seeds;
+    const dir = cfg.generationsDir; mkdirSync(dir, { recursive: true });
     for (let i = 0; i < n; i += 1) {
-      const seed = seeds[i % seeds.length];
-      const w = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount(keys[i]) });
+      const seed = roster[i % roster.length];
+      const w = createWalletClient({ chain, transport: http(cfg.rpc), account: privateKeyToAccount(keys[i], { nonceManager }) });
+      if (existsSync(`${dir}/${generation}-${w.account!.address.toLowerCase()}.json`)) { log(`gladiator ${seed.name} ${w.account!.address.slice(0, 10)} already seeded generation ${generation}; skipping`); continue; }
+      // a strategy this wallet already has live on the router (an earlier run that stopped before entering) goes first
+      const mine = (await liveGladiators(cfg.gymSubgraph, cfg.router).catch(() => [])).filter((g) => g.maker.toLowerCase() === w.account!.address.toLowerCase());
+      for (const g of mine) { await dock(pub, w, cfg.aqua, cfg.router, g.strategyHash, g.tokens); log(`   docked ${g.strategyHash.slice(0, 12)}`); }
       const spec = { ...seed.spec, salt: BigInt(keccak256(toHex(`${seed.name}-${generation}-${Date.now()}`))) };
       const compiled = compile(spec, cfg.market);
       const tokens = compiled.tokens.map((t) => t.address); const amounts = ledgerFor(compiled.tokens);
@@ -51,7 +61,7 @@ async function main() {
       const name = stringToHex(seed.name, { size: 32 });
       await gladiator.register(pub, w, arena, name, "0x0000000000000000000000000000000000000000");
       await gladiator.enter(pub, w, arena, shipped.strategyHash, seed.archetype);
-      const knobs = { ...summarize(spec), parent: null, rationale: `Seeded by the lanista: ${seed.name}.` };
+      const knobs = { ...summarize(spec), parent: null, rationale: `Seeded by the lanista${fromFile ? " from the gym's last field" : ""}: ${seed.name}.` };
       writeFileSync(`${dir}/${generation}-${w.account!.address.toLowerCase()}.json`, JSON.stringify({ generation, name: seed.name, address: w.account!.address, mind: "seed", spec: { ...spec, salt: spec.salt.toString() }, listing: compiled.listing, knobs, program: compiled.bytes, tokens, ledger: amounts.map(String), pairs: compiled.pairs.map((p) => p.name), blob: shipped.blob, strategyHash: shipped.strategyHash, draft: null, rejected: [], transcript: [], context: null }, null, 1));
       log(`gladiator ${seed.name} ${w.account!.address.slice(0, 10)} shipped ${shipped.strategyHash.slice(0, 12)} on ${compiled.pairs.map((p) => p.name).join(", ")} and entered generation ${generation}`);
       for (const line of compiled.listing) log(`     ${line}`);
@@ -64,7 +74,7 @@ async function main() {
     const generation = await pub.readContract({ address: arena, abi: arenaAbi, functionName: "currentGeneration" });
     // entries from the gym arena subgraph, scores from the gym Aquascan API
     const q = `{ entries(where: { generation: "${generation}" }) { gladiator { id } strategyHash } }`;
-    const res = await fetch(cfg.gymSubgraph.replace("aqua-gym", "arena-gym"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
+    const res = await fetch(cfg.arenaSubgraph, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
     const entries = ((await res.json()) as { data: { entries: { gladiator: { id: Address }; strategyHash: Hex }[] } }).data.entries;
     let champion: { gladiator: Address; hash: Hex; score: bigint } | null = null;
     for (const e of entries) {

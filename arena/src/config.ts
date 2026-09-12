@@ -22,6 +22,10 @@ export interface Config {
   informedMoveBps: number; informedProbability: number; informedUsd: number; informedHorizonS: number;   // the informed taker: acts on a coming move of at least this many bps, with this probability per tick and pair, at this size, reading the tape this far ahead
   flowPassShare: number; informedPassShare: number;     // share of uninformed / informed orders that arrive through the taker holding an arena pass
   market: Market;
+  live: boolean;                       // ARENA_LIVE=1: a real chain; no fork, no tape replay, no pool swaps by the engine, real inventory
+  arenaSubgraph: string; poolsSubgraph: string;   // in the gym derived from the aqua subgraph's URL; on the network given as gateway URLs
+  generationsDir: string;              // where generation files are written and read
+  loopUsdc: number;                    // the validator's triangle probe, in USDC
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -37,12 +41,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ...(oracles["USDC/cbBTC"] ? [{ name: "cbBTC/USDC", oracle: oracles["USDC/cbBTC"], oracleDecimals: 18, oracleBase: usdc, oracleQuote: cbbtc, pool: pools["USDC/cbBTC"], feeTier: 500 }] : []),
     ...(oracles["WETH/cbBTC"] ? [{ name: "cbBTC/WETH", oracle: oracles["WETH/cbBTC"], oracleDecimals: 18, oracleBase: weth, oracleQuote: cbbtc, pool: pools["WETH/cbBTC"], feeTier: 500 }] : []),
   ];
+  const gymSubgraph = env.GYM_SUBGRAPH ?? "http://localhost:8100/subgraphs/name/naumachy/aqua-gym";
   return {
     rpc: env.GYM_RPC ?? "http://127.0.0.1:8545", chainId: Number(a.chainId ?? 8453),
     router: a.router, oracle: oracles["WETH/USDC"], taker: a.taker, raider: a.raider ?? a.taker, takerData: a.takerData, pass: a.pass ?? "0x0000000000000000000000000000000000000000",
     aqua: a.aqua, weth: a.weth, usdc: a.usdc, cbbtc: a.cbbtc, pool: pools["WETH/USDC"], oracles, pools,
     swapRouter02: (env.SWAP_ROUTER02 ?? "0x2626664c2603336E57B271c5C0b26F421741e481") as Address,
-    gymSubgraph: env.GYM_SUBGRAPH ?? "http://localhost:8100/subgraphs/name/naumachy/aqua-gym",
+    gymSubgraph,
+    live: env.ARENA_LIVE === "1",
+    arenaSubgraph: env.ARENA_SUBGRAPH_URL ?? gymSubgraph.replace("aqua-gym", "arena-gym"),
+    poolsSubgraph: env.POOLS_SUBGRAPH_URL ?? gymSubgraph.replace("aqua-gym", "pools-gym"),
+    generationsDir: env.GENERATIONS_DIR ?? REPO_ROOT + "infra/data/gym/generations",
+    loopUsdc: Number(env.LOOP_USDC ?? 50),
     tapeSubgraph: env.TAPE_SUBGRAPH ?? (env.DEX_SUBGRAPH_ID_BASE?.startsWith("http") ? null : env.DEX_SUBGRAPH_ID_BASE ?? null),
     graphApiKey: env.GRAPH_API_KEY,
     engineKey: (env.ENGINE_KEY ?? "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a") as Hex,

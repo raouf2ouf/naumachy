@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createPublicClient, createWalletClient, http, formatUnits, type Address, type Hex } from "viem";
+import { createPublicClient, createWalletClient, http, formatUnits, nonceManager, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { loadConfig, REPO_ROOT, type Config } from "./config.js";
 import { erc20Abi, oracleAbi, routerAbi, swapRouter02Abi, takerAbi, takerDataAbi } from "./abi.js";
@@ -23,12 +23,12 @@ interface TakerRt { name: "pass" | "raider"; address: Address; td: Hex }
 // contracts, so Aqua's ledger, the subgraph and Aquascan see them like any other fill.
 async function main() {
   const cfg = loadConfig();
-  const account = privateKeyToAccount(cfg.engineKey);
+  const account = privateKeyToAccount(cfg.engineKey, { nonceManager });   // a lagging RPC nonce is answered with the last used plus one
   const chain = { id: cfg.chainId, name: "gym", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpc] } } } as const;
   const pub = createPublicClient({ chain, transport: http(cfg.rpc) });
   const wallet = createWalletClient({ chain, transport: http(cfg.rpc), account });
-  const forkBlock = BigInt(readFileSync(process.env.GYM_FORK_BLOCK_FILE ?? REPO_ROOT + "infra/data/gym/fork-block", "utf8").trim());
-  const forkTs = Number((await pub.getBlock({ blockNumber: forkBlock })).timestamp);
+  // the gym replays a tape from the fork's timestamp; a live chain has no fork and no tape
+  const forkTs = cfg.live ? 0 : Number((await pub.getBlock({ blockNumber: BigInt(readFileSync(process.env.GYM_FORK_BLOCK_FILE ?? REPO_ROOT + "infra/data/gym/fork-block", "utf8").trim()) })).timestamp);
   const takers: Record<"pass" | "raider", TakerRt> = {
     pass: { name: "pass", address: cfg.taker, td: await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.taker, true] }) },
     raider: { name: "raider", address: cfg.raider, td: await pub.readContract({ address: cfg.takerData, abi: takerDataAbi, functionName: "build", args: [cfg.raider, true] }) },
@@ -39,13 +39,13 @@ async function main() {
   const token = (a: Address): Token => market.tokens.find((t) => t.address.toLowerCase() === a.toLowerCase())!;
   const fmt = (a: Address, amount: bigint) => `${Number(formatUnits(amount, token(a).decimals)).toFixed(token(a).decimals === 6 ? 2 : 5)} ${sym(a)}`;
 
-  // approvals for the tape replay through the Uniswap router
-  for (const t of market.tokens) {
+  // approvals for the tape replay through the Uniswap router; a live engine never swaps the pools
+  if (!cfg.live) for (const t of market.tokens) {
     const allowance = await pub.readContract({ address: t.address, abi: erc20Abi, functionName: "allowance", args: [account.address, cfg.swapRouter02] });
     if (allowance === 0n) await wallet.writeContract({ address: t.address, abi: erc20Abi, functionName: "approve", args: [cfg.swapRouter02, 2n ** 255n] });
   }
-  const tape = await loadTape(cfg, forkTs);
-  log(`engine ${account.address} | pairs ${market.pairs.map((p) => p.name).join(", ")} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps | tolerance ${cfg.toleranceBps} bps | informed: ${cfg.informedMoveBps} bps move ${cfg.informedHorizonS} s ahead, p=${cfg.informedProbability}, $${cfg.informedUsd} | pass share flow ${cfg.flowPassShare} informed ${cfg.informedPassShare}`);
+  const tape = cfg.live ? [] : await loadTape(cfg, forkTs);
+  log(`engine ${account.address} | ${cfg.live ? "LIVE: real pools, the takers' own inventory, no tape" : "gym"} | pairs ${market.pairs.map((p) => p.name).join(", ")} | tape ${tape.length} swaps over ${cfg.tapeMinutes} min (scale ${cfg.tapeScale}) | probe $${cfg.probeUsd} noise $${cfg.noiseUsd} p=${cfg.noiseProbability} edge ${cfg.edgeBps} bps | tolerance ${cfg.toleranceBps} bps | informed: ${cfg.informedMoveBps} bps move ${cfg.informedHorizonS} s ahead, p=${cfg.informedProbability}, $${cfg.informedUsd} | pass share flow ${cfg.flowPassShare} informed ${cfg.informedPassShare}`);
 
   // prices: quote per base, 18 decimals, per pair; USD through the pair with USDC
   const price = (pair: Pair) => pub.readContract({ address: pair.oracle, abi: oracleAbi, functionName: "latestAnswer" });
@@ -112,7 +112,7 @@ async function main() {
       }
     }
     // a silent or exhausted tape still needs moving pools: random swaps through them, so prints exist and prices wobble
-    if (tapeIndex >= tape.length && Math.random() < cfg.poolNoiseProbability) {
+    if (!cfg.live && tapeIndex >= tape.length && Math.random() < cfg.poolNoiseProbability) {
       const pair = market.pairs[Math.floor(Math.random() * market.pairs.length)];
       const sellBase = Math.random() < 0.5; const usd = Math.max(50, Math.round(Math.random() * cfg.poolNoiseUsd));
       const tokenIn = sellBase ? pair.oracleBase.address : pair.oracleQuote.address; const tokenOut = sellBase ? pair.oracleQuote.address : pair.oracleBase.address;
@@ -167,6 +167,9 @@ async function main() {
         const why = best.out >= poolOut ? "flow: best quote beat the pool" : `flow: within ${tolBps.toFixed(1)} bps`;
         const took = await take(wallet, cfg, best.g, tokenIn, tokenOut, amt, taker, `${why}, ${label}`, fmt);
         if (took) { fills += 1; log(`${best.g.maker.slice(0, 10)} ${took} | ${pair.name} ${formatUnits(p, 18)} | fills ${fills} (arbs ${arbs}) | tape ${tapeIndex}/${tape.length}`); }
+      } else if (cfg.live) {
+        // on a live chain the order that no gladiator wins goes to the real pool, which needs nothing from us
+        log(`pool       flow (${taker.name}): ${label} $${usd} stays with the pool, best gladiator ${best ? ((Number(best.out) / Number(fairAmt) - 1) * 1e4).toFixed(1) + " bps from mid" : "none"}, tolerance ${tolBps.toFixed(1)} bps`);
       } else {
         try {
           await poolSwap(pair, tokenIn, tokenOut, amt);

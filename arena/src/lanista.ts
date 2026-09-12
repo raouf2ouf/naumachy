@@ -1,4 +1,5 @@
 import { parseAbi, type Address, type Hex, type PublicClient, type WalletClient } from "viem";
+import { settled } from "./ship.js";
 
 export const arenaAbi = parseAbi([
   "function register(bytes32 name, address parent)",
@@ -14,8 +15,7 @@ export const arenaAbi = parseAbi([
 
 async function send(pub: PublicClient, wallet: WalletClient, address: Address, functionName: string, args: unknown[]): Promise<Hex> {
   const h = await wallet.writeContract({ address, abi: arenaAbi, functionName: functionName as never, args: args as never, chain: wallet.chain, account: wallet.account! });
-  const r = await pub.waitForTransactionReceipt({ hash: h });
-  if (r.status !== "success") throw new Error(`${functionName} reverted ${h}`);
+  await settled(pub, h).catch(() => { throw new Error(`${functionName} reverted ${h}`); });
   return h;
 }
 
