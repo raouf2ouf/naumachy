@@ -12,8 +12,8 @@ dataSources:
     network: base
     source:
       abi: ArenaRegistry
-      address: "0xb3ba00b2045db69331bd0b25bcc22a90244a3f8e"
-      startBlock: 50999187
+      address: "0xb709161c34b032dd5c945e3418b20444b0f73bc6"
+      startBlock: 51204315
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

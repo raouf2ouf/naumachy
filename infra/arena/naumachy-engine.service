@@ -1,0 +1,16 @@
+[Unit]
+Description=Naumachy taker engine on Base
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=naumachy
+WorkingDirectory=/home/naumachy/naumachy/arena
+EnvironmentFile=/home/naumachy/arena.env
+Environment=PATH=/home/naumachy/node-current/bin:/home/naumachy/.foundry/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/naumachy/node-current/bin/node --import tsx src/engine.ts
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

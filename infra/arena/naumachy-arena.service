@@ -1,0 +1,17 @@
+[Unit]
+Description=Naumachy arena: generations on Base (minds, lanista)
+After=network-online.target naumachy-engine.service
+Wants=network-online.target
+
+[Service]
+User=naumachy
+WorkingDirectory=/home/naumachy/naumachy/agents
+EnvironmentFile=/home/naumachy/arena.env
+Environment=PATH=/home/naumachy/node-current/bin:/home/naumachy/.foundry/bin:/usr/local/bin:/usr/bin:/bin
+Environment=ANVIL=/home/naumachy/.foundry/bin/anvil
+ExecStart=/home/naumachy/node-current/bin/node --import tsx src/evolve.ts
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

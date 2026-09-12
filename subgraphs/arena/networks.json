@@ -1,3 +1,8 @@
 {
-  "base": { "ArenaRegistry": { "address": "0x0000000000000000000000000000000000000000", "startBlock": 0 } }
+  "base": {
+    "ArenaRegistry": {
+      "address": "0xb709161c34b032dd5c945e3418b20444b0f73bc6",
+      "startBlock": 51204315
+    }
+  }
 }

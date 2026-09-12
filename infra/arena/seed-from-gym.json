@@ -1,0 +1,153 @@
+{
+ "note": "Base generation 0: the last closed field of the gym (generation 7), champion first. Salts are drawn at open.",
+ "seeds": [
+  {
+   "name": "steady",
+   "spec": {
+    "pairs": [
+     "WETH/USDC",
+     "cbBTC/USDC",
+     "cbBTC/WETH"
+    ],
+    "capBps": 2000,
+    "ops": [
+     {
+      "op": "toxicityFee",
+      "baseBps": 6,
+      "slopeBps": 400,
+      "maxBps": 85,
+      "windowSeconds": 600
+     },
+     {
+      "op": "anchor",
+      "depth": 150,
+      "maxStaleness": 15
+     },
+     {
+      "op": "xyc"
+     }
+    ]
+   },
+   "from": {
+    "gym_generation": 7,
+    "champion": true,
+    "attested": {
+     "scoreUsd": 2.590878,
+     "seUsd": 0.961097,
+     "fills": 28
+    }
+   }
+  },
+  {
+   "name": "flat",
+   "spec": {
+    "pairs": [
+     "WETH/USDC",
+     "cbBTC/USDC",
+     "cbBTC/WETH"
+    ],
+    "capBps": 2000,
+    "ops": [
+     {
+      "op": "toxicityFee",
+      "baseBps": 6,
+      "slopeBps": 375,
+      "maxBps": 80,
+      "windowSeconds": 600
+     },
+     {
+      "op": "anchor",
+      "depth": 120,
+      "maxStaleness": 18
+     },
+     {
+      "op": "xyc"
+     }
+    ]
+   },
+   "from": {
+    "gym_generation": 7,
+    "champion": false,
+    "attested": {
+     "scoreUsd": 0.430602,
+     "seUsd": 0.723861,
+     "fills": 27
+    }
+   }
+  },
+  {
+   "name": "tight",
+   "spec": {
+    "pairs": [
+     "WETH/USDC",
+     "cbBTC/USDC",
+     "cbBTC/WETH"
+    ],
+    "capBps": 2000,
+    "ops": [
+     {
+      "op": "toxicityFee",
+      "baseBps": 6,
+      "slopeBps": 375,
+      "maxBps": 82,
+      "windowSeconds": 600
+     },
+     {
+      "op": "anchor",
+      "depth": 145,
+      "maxStaleness": 15
+     },
+     {
+      "op": "xyc"
+     }
+    ]
+   },
+   "from": {
+    "gym_generation": 7,
+    "champion": false,
+    "attested": {
+     "scoreUsd": 0.882463,
+     "seUsd": 0.533428,
+     "fills": 30
+    }
+   }
+  },
+  {
+   "name": "wide",
+   "spec": {
+    "pairs": [
+     "WETH/USDC",
+     "cbBTC/USDC",
+     "cbBTC/WETH"
+    ],
+    "capBps": 2000,
+    "ops": [
+     {
+      "op": "toxicityFee",
+      "baseBps": 6,
+      "slopeBps": 400,
+      "maxBps": 85,
+      "windowSeconds": 600
+     },
+     {
+      "op": "anchor",
+      "depth": 150,
+      "maxStaleness": 10
+     },
+     {
+      "op": "xyc"
+     }
+    ]
+   },
+   "from": {
+    "gym_generation": 7,
+    "champion": false,
+    "attested": {
+     "scoreUsd": 1.232614,
+     "seUsd": 0.634417,
+     "fills": 30
+    }
+   }
+  }
+ ]
+}
