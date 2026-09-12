@@ -11,4 +11,6 @@ ARENA_LIVE=1 GYM_ADDRESSES=infra/data/arena/addresses.json SEED_FILE=infra/arena
 cp infra/arena/naumachy-*.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now naumachy-engine naumachy-arena
 ```
 
+Promotion, the one act that needs a person, runs on the operator's machine with the Flex: `yarn workspace @naumachy/arena promote` (`--dry-run` to see the request; `docs/boundary.md` for the protocol).
+
 The minds' briefing carries `agents/gym-record.json`, the record of the training seasons, reconstructed from the briefings kept in the gym's generation files. The Ledger path (Key Ring for `arena.env`, the promotion tap) is in `docs/ledger-and-hosting.md`.
