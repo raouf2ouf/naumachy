@@ -26,7 +26,8 @@ export function Addr({ value, chars = 6, className = "" }: { value: string; char
 }
 
 // A priced number never appears alone: unpriced stays a word, a partial price gets a tilde and its coverage.
-export function Money({ p, signed = false, colored = false, pending = false, className = "" }: { p: Priced; signed?: boolean; colored?: boolean; pending?: boolean; className?: string }) {
+// compact: the tilde stays, the coverage moves into the tooltip instead of a chip, for narrow lists.
+export function Money({ p, signed = false, colored = false, pending = false, compact = false, className = "" }: { p: Priced; signed?: boolean; colored?: boolean; pending?: boolean; compact?: boolean; className?: string }) {
   if (p.value === null && pending) return <span className={`text-ink-faint ${className}`} title="the reference hour has not passed yet">pending</span>;
   if (p.value === null) return <span className={`text-ink-faint ${className}`} title="no acceptable price for at least one leg">unpriced</span>;
   const partial = p.confidence < 0.995;
@@ -34,7 +35,7 @@ export function Money({ p, signed = false, colored = false, pending = false, cla
   return (
     <span className={`${tone} ${className}`} title={`${p.source}, as of ${p.at.replace("T", " ").slice(0, 16)} UTC, ${Math.round(p.confidence * 100)}% of fills priced`}>
       {partial ? "~" : ""}{usd(p.value, signed)}
-      {partial && <span className="chip ml-1.5">priced {Math.round(p.confidence * 100)}%</span>}
+      {partial && !compact && <span className="chip ml-1.5">priced {Math.round(p.confidence * 100)}%</span>}
     </span>
   );
 }
